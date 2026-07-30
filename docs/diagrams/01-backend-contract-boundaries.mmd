@@ -1,0 +1,41 @@
+flowchart LR
+    subgraph Client[Mobile Client]
+        Mobile[Mobile App]
+        LocalCache[(Local SDUI Cache)]
+        Mobile <--> LocalCache
+    end
+
+    subgraph Experience[Experience Platform]
+        SDUI[SDUI Service]
+        SDUIContract[(SDUI OpenAPI)]
+        SDUI --- SDUIContract
+        RepresentationCache[(Representation Cache - evolution)]
+        SDUI -.-> RepresentationCache
+    end
+
+    subgraph Entry[Pix Entry]
+        Decoding[Decoding Service]
+        DecodingContract[(Decoding OpenAPI)]
+        Decoding --- DecodingContract
+    end
+
+    subgraph Payments[Payments]
+        Payment[Payment Service]
+        PaymentContract[(Payment OpenAPI)]
+        Payment --- PaymentContract
+    end
+
+    subgraph Platform[Platform and SRE]
+        Observability[Observability Service]
+        ObsContract[(Observability OpenAPI)]
+        Observability --- ObsContract
+    end
+
+    Mobile -->|configuration and screens| SDUI
+    Mobile -->|raw Pix payload| Decoding
+    Mobile -->|payment commands| Payment
+    Decoding -. normalized instruction .-> Payment
+
+    SDUI -. logs metrics traces .-> Observability
+    Decoding -. logs metrics traces .-> Observability
+    Payment -. logs metrics traces .-> Observability

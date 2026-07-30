@@ -1,0 +1,776 @@
+{
+  "@context": {
+    "openpix": "https://openpix.dev/ontology/",
+    "dcterms": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "schema": "https://schema.org/",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "title": "dcterms:title",
+    "status": "openpix:status",
+    "boundedContext": {
+      "@id": "openpix:boundedContext",
+      "@type": "@id"
+    },
+    "created": {
+      "@id": "dcterms:created",
+      "@type": "xsd:date"
+    },
+    "updated": {
+      "@id": "dcterms:modified",
+      "@type": "xsd:date"
+    },
+    "tags": {
+      "@id": "dcterms:subject",
+      "@container": "@set"
+    },
+    "content": "schema:text",
+    "sourcePath": "schema:url",
+    "ontologyVersion": "openpix:ontologyVersion",
+    "belongsTo": {
+      "@id": "dcterms:isPartOf",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "contains": {
+      "@id": "dcterms:hasPart",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "defines": {
+      "@id": "openpix:defines",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "proposes": {
+      "@id": "openpix:proposes",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "decidedBy": {
+      "@id": "openpix:decidedBy",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "resolves": {
+      "@id": "openpix:resolves",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "implements": {
+      "@id": "openpix:implements",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "explains": {
+      "@id": "openpix:explains",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "dependsOn": {
+      "@id": "openpix:dependsOn",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "producesFor": {
+      "@id": "openpix:producesFor",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "observes": {
+      "@id": "openpix:observes",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "observedBy": {
+      "@id": "openpix:observedBy",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "governs": {
+      "@id": "openpix:governs",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "supersedes": {
+      "@id": "dcterms:replaces",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "relatedTo": {
+      "@id": "dcterms:relation",
+      "@type": "@id",
+      "@container": "@set"
+    }
+  },
+  "@graph": [
+    {
+      "@id": "https://openpix.dev/knowledge/adr-decoding-001",
+      "@type": [
+        "openpix:ArchitectureDecision"
+      ],
+      "title": "Keep Pix Payload Decoding Stateless",
+      "status": "proposed",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-decoding",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "adr",
+        "decoding",
+        "security",
+        "stateless"
+      ],
+      "content": "# ADR-DECODING-001: Stateless payload decoding\n\n## Status\n\nProposed; contract exists, implementation pending.\n\n## Context\n\nPayloads Pix contêm material sensível e podem chegar por diferentes canais. O\ndecoder não precisa manter lifecycle para interpretar uma requisição.\n\n## Decision\n\nImplementar decoding como operação stateless e determinística para o mesmo\npayload e versão de regras. Não persistir payload bruto, chave Pix ou resultado.\nResponder com `no-store` e telemetria sem conteúdo sensível.\n\n## Consequences\n\n### Positive\n\n- escala horizontal simples;\n- retries seguros;\n- menor superfície de retenção de dados;\n- fronteira clara com Payment.\n\n### Negative\n\n- payload repetido é processado novamente;\n- investigação não pode depender de conteúdo armazenado;\n- resolução futura de URLs dinâmicas exigirá timeout, SSRF protection e nova\n  decisão.\n\n## Knowledge graph\n\n- Resolve [[RFC-DECODING-001-pix-payload-decoding-boundary]].\n- Produz para [[CTX-PAYMENT]].\n- Pertence a [[CTX-DECODING]].",
+      "sourcePath": "decoding-service/articles/adrs/ADR-DECODING-001-stateless-payload-decoding.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-decoding"
+      ],
+      "producesFor": [
+        "https://openpix.dev/knowledge/ctx-payment"
+      ],
+      "resolves": [
+        "https://openpix.dev/knowledge/rfc-decoding-001"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/adr-observability-001",
+      "@type": [
+        "openpix:ArchitectureDecision"
+      ],
+      "title": "Separate Liveness and Readiness and Expose Pull-Based Metrics",
+      "status": "proposed",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-observability",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "adr",
+        "liveness",
+        "observability",
+        "prometheus",
+        "readiness"
+      ],
+      "content": "# ADR-OBSERVABILITY-001: Pull-based operational endpoints\n\n## Status\n\nProposed; contract exists, implementation pending.\n\n## Context\n\nOrquestradores precisam distinguir processo travado de serviço incapaz de\nreceber tráfego. Métricas precisam de um protocolo simples e compatível com a\nplataforma inicial.\n\n## Decision\n\nSeparar `/health` e `/ready`. Expor `/metrics` no formato Prometheus para\nscraping, protegido por rede e/ou credencial. Probes não são cacheados e não\nexpõem endereços, credentials ou detalhes sensíveis.\n\n## Consequences\n\n### Positive\n\n- restart e traffic management usam sinais diferentes;\n- scraping desacopla o serviço do backend de métricas;\n- operação local é simples.\n\n### Negative\n\n- endpoints internos exigem política de acesso;\n- readiness mal projetada pode causar cascata;\n- push de métricas de jobs curtos não é coberto.\n\n## Knowledge graph\n\n- Resolve [[RFC-OBSERVABILITY-001-operational-observability-interface]].\n- Pertence a [[CTX-OBSERVABILITY]].\n- Observa [[CTX-SDUI]], [[CTX-DECODING]] e [[CTX-PAYMENT]].",
+      "sourcePath": "observability-service/articles/adrs/ADR-OBSERVABILITY-001-pull-based-operational-endpoints.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-observability"
+      ],
+      "observes": [
+        "https://openpix.dev/knowledge/ctx-decoding",
+        "https://openpix.dev/knowledge/ctx-payment",
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ],
+      "resolves": [
+        "https://openpix.dev/knowledge/rfc-observability-001"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/adr-payment-001",
+      "@type": [
+        "openpix:ArchitectureDecision"
+      ],
+      "title": "Model Payment as an Aggregate with Explicit State Transitions",
+      "status": "proposed",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-payment",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "adr",
+        "aggregate",
+        "idempotency",
+        "payment",
+        "state-machine"
+      ],
+      "content": "# ADR-PAYMENT-001: Payment aggregate state machine\n\n## Status\n\nProposed; OpenAPI exists, Java implementation pending.\n\n## Context\n\nCreate, confirm and cancel podem concorrer ou ser repetidos. Deixar controllers\nalterarem registros diretamente permite transições impossíveis e idempotência\nparcial.\n\n## Decision\n\nPayment será um aggregate que autoriza transições explícitas. Application\nservices coordenam aggregate, repositório e registro de idempotência;\ncontrollers apenas traduzem HTTP.\n\nChave, operação, caller e fingerprint são persistidos em uma restrição única.\nUma transação grava o resultado e o registro idempotente de forma atômica.\n\n## Consequences\n\n### Positive\n\n- invariantes testáveis sem HTTP;\n- concorrência resolvida na persistência;\n- transições inválidas têm erro estável;\n- controller permanece fino.\n\n### Negative\n\n- exige modelagem e testes de concorrência;\n- retenção de idempotency records precisa de política;\n- integração assíncrona futura exigirá outbox.\n\n## Knowledge graph\n\n- Resolve [[RFC-PAYMENT-001-payment-lifecycle-and-idempotency]].\n- Pertence a [[CTX-PAYMENT]].\n- É observado por [[CTX-OBSERVABILITY]].",
+      "sourcePath": "payment-service/articles/adrs/ADR-PAYMENT-001-aggregate-state-machine.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-payment"
+      ],
+      "observedBy": [
+        "https://openpix.dev/knowledge/ctx-observability"
+      ],
+      "resolves": [
+        "https://openpix.dev/knowledge/rfc-payment-001"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/adr-platform-001",
+      "@type": [
+        "openpix:ArchitectureDecision"
+      ],
+      "title": "Keep OpenAPI Contracts with the Owning Service",
+      "status": "accepted",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-platform",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "adr",
+        "openapi",
+        "ownership",
+        "platform"
+      ],
+      "content": "# ADR-PLATFORM-001: Service-local OpenAPI contracts\n\n## Status\n\nAccepted.\n\n## Context\n\nO backend é um monorepo com serviços de ownership independente e stacks\npoliglotas. Um contrato central poderia sugerir ownership central e releases\ncoordenadas.\n\n## Decision\n\nCada contrato fica em `<service-name>-service/contracts/openapi.yaml`. Conceitos\ntransversais podem ser repetidos ou publicados futuramente como artefatos de\ngovernança, mas nenhum serviço referencia schemas internos de outro no runtime.\n\n## Consequences\n\n### Positive\n\n- ownership e revisão acompanham o deployable;\n- cada pipeline valida somente seu contrato;\n- serviços podem evoluir sem compartilhar código;\n- descoberta continua possível pelo knowledge graph.\n\n### Negative\n\n- convenções transversais podem divergir;\n- alterações amplas exigem automação de lint e governança;\n- consumidores precisam declarar explicitamente qual contrato usam.\n\n## Rejected alternatives\n\n- Um único `backend-openapi.yaml`.\n- Modelos Python/Java compartilhados como fonte do contrato.\n- Gerar o contrato apenas a partir do runtime sem revisão contract-first.\n\n## Knowledge graph\n\n- Resolve [[RFC-PLATFORM-001-contract-first-service-boundaries]].\n- Pertence a [[CTX-PLATFORM]].",
+      "sourcePath": "docs/architecture/adrs/ADR-PLATFORM-001-service-local-openapi-contracts.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-platform"
+      ],
+      "governs": [
+        "https://openpix.dev/knowledge/ctx-decoding",
+        "https://openpix.dev/knowledge/ctx-observability",
+        "https://openpix.dev/knowledge/ctx-payment",
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ],
+      "resolves": [
+        "https://openpix.dev/knowledge/rfc-platform-001"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/adr-sdui-001",
+      "@type": [
+        "openpix:ArchitectureDecision"
+      ],
+      "title": "Parse Mobile Headers with Typed FastAPI Dependencies",
+      "status": "accepted",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-sdui",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "adr",
+        "dependency-injection",
+        "fastapi",
+        "headers",
+        "sdui"
+      ],
+      "content": "# ADR-SDUI-001: Typed request context dependencies\n\n## Status\n\nAccepted and implemented.\n\n## Context\n\nOs endpoints de configuração e tela repetiam a declaração de headers de app,\nregião, locale, capabilities, correlação, tracing e cache. A repetição aumenta\no risco de aliases e validações divergirem.\n\n## Decision\n\nUsar dependências FastAPI com `Annotated`:\n\n- `get_mobile_request_context` normaliza o contexto compartilhado;\n- `get_sdui_request_context` acrescenta as versões de contrato e componentes;\n- endpoints recebem `MobileRequestContext` ou `SduiRequestContext`;\n- parâmetros das dependências continuam aparecendo no OpenAPI gerado.\n\n## Why not a decorator\n\nDecorators escondem a assinatura da operação, exigem cuidado para preservar\nmetadata e integram pior com validação/OpenAPI. `Depends` faz parte do modelo de\nexecução do FastAPI e mantém tipos visíveis.\n\n## Consequences\n\n### Positive\n\n- uma regra para cada header;\n- endpoint focado no caso de uso;\n- contextos imutáveis e testáveis;\n- documentação automática preservada.\n\n### Negative\n\n- a função de dependência concentra muitos parâmetros;\n- contexto de cliente continua não confiável;\n- alterações transversais afetam todos os endpoints consumidores.\n\n## Verification\n\nTestes confirmam headers únicos no OpenAPI runtime, Problem Details para\nvalidação inválida e normalização de capabilities/versões.\n\n## Knowledge graph\n\n- Resolve [[RFC-SDUI-001-mobile-context-and-component-compatibility]].\n- Relaciona-se a [[ADR-SDUI-002-static-json-runtime-source]].\n- Pertence a [[CTX-SDUI]].",
+      "sourcePath": "sdui-service/articles/adrs/ADR-SDUI-001-typed-request-context-dependencies.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ],
+      "relatedTo": [
+        "https://openpix.dev/knowledge/adr-sdui-002"
+      ],
+      "resolves": [
+        "https://openpix.dev/knowledge/rfc-sdui-001"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/adr-sdui-002",
+      "@type": [
+        "openpix:ArchitectureDecision"
+      ],
+      "title": "Use Validated Static JSON as the Initial SDUI Source",
+      "status": "accepted",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-sdui",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "adr",
+        "incremental-delivery",
+        "json",
+        "pydantic",
+        "sdui"
+      ],
+      "content": "# ADR-SDUI-002: Validated static JSON source\n\n## Status\n\nAccepted as an interim decision.\n\n## Context\n\nO primeiro milestone precisa estabilizar contratos e comportamento HTTP antes\nde introduzir banco, migrations e workflow de publicação.\n\n## Decision\n\n`configuration.json` e `screens.json` são as fontes runtime. `utils.py` lê e\nlocaliza documentos sem depender de FastAPI; `main.py` converte os dicionários\npara os modelos Pydantic gerados do OpenAPI.\n\nETags são derivados da representação canônica. Arquivo ausente, JSON inválido,\ntela desconhecida e schema inválido são traduzidos para Problem Details.\n\n## Consequences\n\n### Positive\n\n- ciclo local curto;\n- fixtures legíveis e versionadas;\n- schema é validado antes da resposta;\n- persistência não é adicionada sem necessidade.\n\n### Negative\n\n- não existe publicação transacional;\n- edição exige deploy;\n- não há audit trail, rollback formal ou concorrência;\n- referências cruzadas ainda precisam de validação de publicação.\n\n## Exit criteria\n\nEsta ADR deverá ser superseded quando Admin API e publicação exigirem drafts,\nrevisões imutáveis, rollback e auditoria persistida.\n\n## Knowledge graph\n\n- Contexto: [[CTX-SDUI]]\n- Compatibilidade: [[RFC-SDUI-001-mobile-context-and-component-compatibility]]\n- Contexto HTTP: [[ADR-SDUI-001-typed-request-context-dependencies]]",
+      "sourcePath": "sdui-service/articles/adrs/ADR-SDUI-002-static-json-runtime-source.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ],
+      "dependsOn": [
+        "https://openpix.dev/knowledge/adr-sdui-001"
+      ],
+      "relatedTo": [
+        "https://openpix.dev/knowledge/rfc-sdui-001"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/architecture-index",
+      "@type": [
+        "openpix:ArchitectureIndex"
+      ],
+      "title": "OpenPix JSR Architecture Knowledge Graph",
+      "status": "active",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-platform",
+      "created": "2026-07-29",
+      "updated": "2026-07-30",
+      "tags": [
+        "architecture",
+        "knowledge-graph",
+        "openpix-jsr"
+      ],
+      "content": "# OpenPix JSR Architecture Knowledge Graph\n\nEste índice é a porta de entrada para decisões, propostas e contextos do\nbackend. Cada nota tem um `id` global, metadados previsíveis e relações\ndirecionadas. Isso permite navegação no Obsidian hoje e extração para um grafo\nou busca semântica no futuro.\n\n## Como navegar\n\n- [[GRAPH-SCHEMA]] define o vocabulário dos metadados.\n- [[ONTOLOGY]] define o alinhamento JSON-LD/RDF.\n- [[CTX-PLATFORM]] reúne decisões transversais.\n- [[CTX-SDUI]] reúne configuração e composição de telas.\n- [[CTX-DECODING]] reúne interpretação de payloads Pix.\n- [[CTX-PAYMENT]] reúne o ciclo de vida de pagamentos.\n- [[CTX-OBSERVABILITY]] reúne saúde, métricas, logs e traces.\n\n## RFCs\n\n- [[RFC-PLATFORM-001-contract-first-service-boundaries]]\n- [[RFC-SDUI-001-mobile-context-and-component-compatibility]]\n- [[RFC-DECODING-001-pix-payload-decoding-boundary]]\n- [[RFC-PAYMENT-001-payment-lifecycle-and-idempotency]]\n- [[RFC-OBSERVABILITY-001-operational-observability-interface]]\n\n## ADRs\n\n- [[ADR-PLATFORM-001-service-local-openapi-contracts]]\n- [[ADR-SDUI-001-typed-request-context-dependencies]]\n- [[ADR-SDUI-002-static-json-runtime-source]]\n- [[ADR-DECODING-001-stateless-payload-decoding]]\n- [[ADR-PAYMENT-001-aggregate-state-machine]]\n- [[ADR-OBSERVABILITY-001-pull-based-operational-endpoints]]\n\n## Artigos\n\n- [[01-o-que-e-sdui]]\n- [[02-contract-first-sdui-backend]]\n- [[03-sdui-compatibility-prevention-reaction]]\n\n## Regra de manutenção\n\nUma mudança arquitetural deve atualizar o documento que tomou a decisão, seus\nlinks de entrada e saída e, quando aplicável, o contrato OpenAPI relacionado.\nDecisões não são apagadas: são marcadas como `superseded` e apontam para a nova\ndecisão.\n\nDepois de editar qualquer nó:\n\n```bash\npython3 scripts/build_knowledge_graph.py\npython3 scripts/build_knowledge_graph.py --check\n```\n\nO Markdown é autoritativo. O arquivo\n`generated/knowledge-graph.jsonld` é uma projeção determinística para GraphRAG,\ntriplestores ou outras ferramentas semânticas.",
+      "sourcePath": "docs/architecture/README.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "contains": [
+        "https://openpix.dev/knowledge/architecture-ontology",
+        "https://openpix.dev/knowledge/ctx-decoding",
+        "https://openpix.dev/knowledge/ctx-observability",
+        "https://openpix.dev/knowledge/ctx-payment",
+        "https://openpix.dev/knowledge/ctx-platform",
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ],
+      "defines": [
+        "https://openpix.dev/knowledge/graph-schema"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/architecture-ontology",
+      "@type": [
+        "openpix:MetadataSchema"
+      ],
+      "title": "OpenPix JSR Architecture Ontology",
+      "status": "active",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-platform",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "architecture",
+        "json-ld",
+        "ontology",
+        "rdf"
+      ],
+      "content": "# OpenPix JSR Architecture Ontology\n\nMarkdown continua sendo a fonte de verdade. A ontologia define como o\nfrontmatter é projetado para JSON-LD/RDF sem exigir que autores editem triples.\n\n## Namespaces reutilizados\n\n| Prefixo | Uso |\n|---|---|\n| `dcterms` | título, datas, relações documentais e subjects |\n| `schema` | artigo, texto e caminho do documento |\n| `skos` | conceitos que representam bounded contexts |\n| `prov` | base para proveniência futura |\n| `openpix` | RFC, ADR e relações específicas da arquitetura |\n\nO namespace do projeto é `https://openpix.dev/ontology/`. IDs locais são\nexpandidos como `https://openpix.dev/knowledge/{id}` durante a geração.\n\n## Tipos\n\n| Frontmatter | Classe JSON-LD |\n|---|---|\n| `rfc` | `openpix:RequestForComments` |\n| `adr` | `openpix:ArchitectureDecision` |\n| `context` | `openpix:ArchitectureContext` e `skos:Concept` |\n| `article` | `schema:TechArticle` |\n| `index` | `openpix:ArchitectureIndex` |\n| `schema` | `openpix:MetadataSchema` |\n\n## Relações\n\nAs relações legíveis do frontmatter são convertidas em predicates:\n\n```yaml\nrelations:\n  - type: resolves\n    target: rfc-sdui-001\n```\n\n```json\n{\n  \"resolves\": [\n    \"https://openpix.dev/knowledge/rfc-sdui-001\"\n  ]\n}\n```\n\nO mapeamento normativo está em `context.jsonld`; as classes e propriedades\npróprias estão em `openpix-architecture.ttl`.\n\n## Geração\n\nNa raiz do repositório:\n\n```bash\npython3 scripts/build_knowledge_graph.py\npython3 scripts/build_knowledge_graph.py --check\n```\n\nO primeiro comando gera\n`docs/architecture/generated/knowledge-graph.jsonld`. O segundo não altera\narquivos e falha quando o artefato está desatualizado ou o grafo é inválido,\nsendo adequado para CI.\n\n## Knowledge graph\n\n- Metadados: [[GRAPH-SCHEMA]]\n- Índice: [[README|Architecture Knowledge Graph]]",
+      "sourcePath": "docs/architecture/ontology/ONTOLOGY.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "defines": [
+        "https://openpix.dev/knowledge/graph-schema"
+      ],
+      "governs": [
+        "https://openpix.dev/knowledge/architecture-index"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/article-sdui-001",
+      "@type": [
+        "schema:TechArticle"
+      ],
+      "title": "O que é Server-Driven UI? Responsabilidades, exemplos e trade-offs",
+      "status": "draft",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-sdui",
+      "created": "2026-07-30",
+      "updated": "2026-07-30",
+      "tags": [
+        "architecture",
+        "article",
+        "design-system",
+        "mobile",
+        "sdui"
+      ],
+      "content": "# O que é Server-Driven UI?\n\n## Responsabilidades, exemplos de mercado e os trade-offs antes da primeira linha de código\n\n**Descrição para o Medium:** Entenda o que o servidor realmente controla em\numa arquitetura SDUI, como o cliente transforma documentos declarativos em\ninterface nativa e o que Samsung Wallet, Google Wallet e Apple Wallet ensinam\nsobre esse tipo de contrato.\n\n<!--\nPROMPT PARA A IMAGEM DE CAPA\n\nCrie uma ilustração editorial horizontal, proporção 16:9, em visão totalmente\nfrontal, para a capa de um artigo técnico sobre Server-Driven UI. Organize todos\nos elementos no mesmo plano, voltados diretamente para o leitor, sem perspectiva\npanorâmica, ângulo lateral ou visão de cima. Mostre, à esquerda, um backend\nabstrato composto por módulos organizados que envia blocos declarativos — cards,\ntextos, botões e listas representados como formas geométricas — através de uma\nponte central semelhante a um contrato versionado. À direita, mostre um\nsmartphone de frente recebendo esses blocos e transformando-os em uma interface\nnativa coesa. Dentro ou ao redor do smartphone, sugira discretamente as partes\nde uma SDUI Engine: parser, compatibilidade, catálogo de componentes, renderer,\nações e fallback, usando camadas visuais conectadas, sem rótulos.\n\nInclua ao fundo três cartões digitais genéricos com layouts diferentes como\nreferência sutil aos modelos declarativos de carteiras digitais, sem reproduzir\nmarcas, logos ou interfaces de Samsung, Google ou Apple. A imagem deve comunicar\ncolaboração e divisão clara de responsabilidades: o servidor define composição\ne conteúdo; o cliente preserva o renderer e o comportamento nativo.\n\nDireção de arte: ilustração tecnológica editorial sofisticada, formas 2D\nlimpas, alinhamento frontal, hierarquia visual evidente, fundo azul-marinho e\ngrafite, acentos verde-menta e pequenos destaques em azul elétrico, iluminação\nsuave, profundidade mínima, alto contraste no centro, composição equilibrada e\nbastante espaço negativo. Aparência profissional, conceitual e humana, sem\nparecer um diagrama corporativo literal.\n\nNão adicionar palavras, títulos, letras, números, logos, marcas registradas,\ncódigo legível, cifrões, moedas, cadeados gigantes, robôs humanoides ou excesso\nde elementos. Não usar estética de banco de imagens, cyberpunk, cartoon\ninfantil, interface futurista ilegível, perspectiva isométrica ou composição\nem profundidade.\n-->\n\n> SDUI não é enviar uma tela pronta. É estabelecer um contrato para que servidor\n> e aplicativo componham juntos uma experiência segura.\n\n## Índice\n\n1. [Contexto: antes do backend, o modelo mental](#1-contexto-antes-do-backend-o-modelo-mental)\n2. [O que SDUI é e o que não é](#2-o-que-sdui-é-e-o-que-não-é)\n3. [Por que adotar](#3-por-que-adotar)\n4. [Uma analogia concreta: carteiras digitais](#4-uma-analogia-concreta-carteiras-digitais)\n5. [A fronteira entre backend e cliente](#5-a-fronteira-entre-backend-e-cliente)\n6. [Responsabilidades e componentes do backend](#6-responsabilidades-e-componentes-do-backend)\n7. [Responsabilidades do cliente](#7-responsabilidades-do-cliente)\n8. [Como uma SDUI Engine costuma ser dividida](#8-como-uma-sdui-engine-costuma-ser-dividida)\n9. [Vantagens, desvantagens e trade-offs](#9-vantagens-desvantagens-e-trade-offs)\n10. [Segurança e limites](#10-segurança-e-limites)\n11. [Alternativas e quando não usar](#11-alternativas-e-quando-não-usar)\n12. [Critérios para escolher SDUI](#12-critérios-para-escolher-sdui)\n13. [Glossário](#13-glossário)\n14. [Conclusão](#14-conclusão)\n15. [Materiais de apoio](#15-materiais-de-apoio)\n\n## 1. Contexto: antes do backend, o modelo mental\n\nAntes de escolher bibliotecas, desenhar um renderer ou construir um editor de\ntelas, existe uma pergunta mais básica: o que significa deixar uma interface\nser orientada pelo servidor?\n\nEm uma aplicação mobile tradicional, layout, ordem dos elementos e boa parte da\nnavegação são definidos no binário. Alterar a home normalmente exige mudar o\ncódigo, passar por testes, publicar uma nova versão e esperar a adoção dos\nusuários.\n\nNo SDUI, o aplicativo continua contendo código nativo, mas o servidor envia uma\ndescrição declarativa da experiência. Um documento pode dizer que uma tela\npossui título, card, lista de opções e botão. O cliente reconhece os tipos,\nassocia cada um a uma implementação do seu catálogo e monta a árvore visual.\n\nUm payload simplificado poderia ser:\n\n```json\n{\n  \"screenId\": \"home\",\n  \"schemaVersion\": \"1\",\n  \"components\": [\n    {\n      \"id\": \"title\",\n      \"type\": \"text\",\n      \"compatibilityVersion\": [\"1\"],\n      \"properties\": {\n        \"text\": \"O que você procura?\",\n        \"style\": \"title\"\n      }\n    },\n    {\n      \"id\": \"catalog\",\n      \"type\": \"button\",\n      \"compatibilityVersion\": [\"1\", \"2\"],\n      \"properties\": {\n        \"label\": \"Explorar produtos\"\n      },\n      \"action\": {\n        \"type\": \"open_native_feature\",\n        \"target\": \"product_catalog\"\n      }\n    }\n  ]\n}\n```\n\nO backend escolheu a composição e o conteúdo. O cliente ainda é dono do\ncomponente `text`, do botão, da tipografia, da acessibilidade, da animação e do\ncódigo que abre o catálogo. Essa separação é a essência do modelo.\n\n## 2. O que SDUI é e o que não é\n\nSDUI é um protocolo de apresentação entre servidor e cliente. O servidor\ndescreve **o que** deve aparecer e parte de **como** os elementos se relacionam;\no aplicativo decide **como renderizar** isso com componentes que já conhece.\n\nEle não é:\n\n- uma WebView disfarçada;\n- HTML remoto inserido no aplicativo;\n- download de classes ou código executável;\n- um Design System inteiro serializado em JSON;\n- autorização para executar uma operação privilegiada;\n- uma forma de eliminar desenvolvimento mobile.\n\nEssa distinção importa. Quando o servidor envia apenas nomes e propriedades\npermitidos por um schema, a superfície fica limitada ao catálogo instalado. Um\n`button` remoto não contém uma função arbitrária: sua ação é traduzida por um\ndispatcher para uma operação nativa previamente registrada.\n\nHá graus de adoção. Um produto pode dirigir apenas banners e cards da home,\ndeixar formulários complexos nativos ou representar jornadas inteiras. Quanto\nmaior o controle remoto, maior a velocidade de publicação — e também a\ncomplexidade de compatibilidade, observabilidade e governança.\n\n## 3. Por que adotar\n\nO principal benefício não é “editar a interface sem atualizar o app” de forma\nirrestrita. É separar a cadência de evolução da composição da cadência de\nentrega do código nativo.\n\nIsso permite:\n\n- publicar conteúdo, ordem e visibilidade com mais rapidez;\n- testar composições e fazer rollout gradual;\n- corrigir ou desativar uma jornada sem aguardar toda a base atualizar;\n- compartilhar uma linguagem de produto entre Android, iOS e outras\n  plataformas;\n- centralizar regras de segmentação e disponibilidade;\n- versionar, auditar e reverter revisões de tela;\n- reduzir releases quando a mudança cabe no catálogo existente.\n\nImagine que a home de um marketplace oferece busca, recomendações e cupons. A\nordem pode variar por país, capability instalada ou experimento. Sem SDUI, cada\nplataforma replica essa decisão. Com SDUI, o backend compõe a lista e os\nclientes a renderizam dentro de seus limites nativos.\n\nO ganho aparece quando existe variação real. Para um aplicativo pequeno, com\ntelas estáveis e uma única plataforma, construir uma engine pode custar mais do\nque manter a interface convencional.\n\n## 4. Uma analogia concreta: carteiras digitais\n\nSamsung Wallet, Google Wallet e Apple Wallet não devem ser tratados\nautomaticamente como engines genéricas de SDUI. Eles são ecossistemas de passes\ncom modelos próprios e uma área de renderização controlada. Ainda assim,\noferecem uma analogia útil: o emissor fornece dados e escolhas declarativas; a\ncarteira possui o renderer e preserva as regras da plataforma.\n\nUma equivalência conceitual é:\n\n| Ecossistema | Contrato compartilhado | Dados da instância | Controle de apresentação |\n|---|---|---|---|\n| Samsung Wallet | Wallet Card | dados e atributos do card | Flexible Layout |\n| Google Wallet | Passes Class | Passes Object | `CardTemplateOverride` |\n| Apple Wallet | Wallet Pass | campos do passe | Pass Style + `pass.json` |\n\nNão é uma equivalência de APIs, mas de responsabilidades.\n\n### 4.1 Samsung Wallet: card e layout flexível\n\nNo Samsung Wallet, parceiros configuram modelos de Wallet Card. Para tipos\ncompatíveis, o Flexible Layout combina áreas predefinidas, como header, área\nprimária e área auxiliar. Chaves de entrada ligam atributos do card aos\ncontainers do layout.\n\nO aprendizado para SDUI é o uso de liberdade limitada. O emissor não desenha\nqualquer pixel nem injeta uma view: escolhe entre regiões e campos conhecidos\npelo renderer. Há também governança de ciclo de vida; ativação e revisão fazem\nparte do processo, e certas escolhas de layout não podem ser simplesmente\ntrocadas depois da ativação.\n\n### 4.2 Google Wallet: classe, objeto e override\n\nO Google Wallet separa a **Passes Class**, que contém propriedades comuns, do\n**Passes Object**, que representa uma instância associada à classe. Uma classe\nde evento pode definir identidade visual e campos compartilhados; cada objeto\ncarrega assento, código e outros dados individuais.\n\nO `CardTemplateOverride`, dentro das informações de template da classe, escolhe\nlinhas e referências de campos para a face do card. O Pass Builder oferece uma\nforma visual de experimentar a construção de um passe.\n\nEssa separação antecipa uma decisão frequente em SDUI:\n\n```text\ntemplate compartilhado + dados da instância + regras de apresentação\n```\n\nAtualizar o que é compartilhado sem duplicar todos os objetos reduz custo, mas\naumenta o impacto de uma mudança: uma revisão de template pode afetar muitas\ninstâncias. Publicação, preview e rollback deixam de ser detalhes.\n\n### 4.3 Apple Wallet: estilo e `pass.json`\n\nNo Apple Wallet, o estilo do passe determina sua aparência geral e a disposição\ndos campos. Para um passe genérico, o pacote contém um `pass.json` com o estilo\n`generic`, identificadores e campos permitidos pelo modelo.\n\nNovamente, o aplicativo Wallet controla o renderer. O emissor descreve\nconteúdo, semântica e assets dentro de uma estrutura aceita. A plataforma\nmantém consistência, comportamento e limites visuais.\n\nAs três carteiras mostram algo valioso: uma interface orientada por dados\nfunciona melhor quando existe um vocabulário pequeno, documentação clara,\npreview, validação e ciclo de publicação — não quando o payload tenta\nreproduzir uma linguagem gráfica irrestrita.\n\n## 5. A fronteira entre backend e cliente\n\n```mermaid\nflowchart LR\n    subgraph Backend[\"Backend SDUI\"]\n        Editor[\"Editor / Admin\"]\n        Publisher[\"Validação e publicação\"]\n        Repository[(\"Conteúdo e revisões\")]\n        Composer[\"Segmentação e composição\"]\n        API[\"SDUI API / BFF\"]\n\n        Editor --> Publisher\n        Publisher --> Repository\n        Repository --> Composer\n        Composer --> API\n    end\n\n    Contract[\"Contrato declarativo versionado\"]\n\n    subgraph Client[\"Cliente nativo\"]\n        Transport[\"Networking e cache\"]\n        Engine[\"SDUI Engine\"]\n        Catalog[\"Catálogo de componentes nativos\"]\n        App[\"Experiência renderizada\"]\n\n        Transport --> Engine\n        Catalog --> Engine\n        Engine --> App\n    end\n\n    API --> Contract\n    Contract --> Transport\n```\n\nO contrato é a fronteira. Backend e cliente podem evoluir separadamente apenas\nse os dois lados concordarem sobre tipos, propriedades, versões, ações e\nfallbacks.\n\nO próprio bloco Mermaid é a fonte editável e reproduzível do diagrama.\n\n## 6. Responsabilidades e componentes do backend\n\nUm backend SDUI real costuma possuir mais que um endpoint retornando JSON.\nMesmo quando os componentes são distribuídos entre serviços, as\nresponsabilidades são estas:\n\n### Contrato e catálogo\n\nDefine envelopes, tipos de componente, propriedades, ações, limites e política\nde versões. O schema precisa ser legível por pessoas e validável por tooling.\nEle é a linguagem comum; não deve importar modelos internos de pagamento.\n\n### Fonte de conteúdo\n\nArmazena templates, telas, configurações, assets referenciados e revisões\nimutáveis. Pode começar em arquivos e evoluir para banco, object storage ou\nCMS. O dado publicado deve ser distinguível do rascunho.\n\n### Composição e targeting\n\nResolve qual revisão entregar usando contexto permitido: plataforma, build,\nlocale, país, capabilities e experimento. Essa camada pode preencher dados e\nremover elementos opcionais, mas não deve confiar em headers do cliente como\nprova de identidade ou permissão.\n\n### Validação e publicação\n\nVerifica schema, referências, profundidade, tamanho, componentes obrigatórios,\nassets, compatibilidade mínima e regras editoriais antes da ativação. Preview,\naprovação, audit trail e rollback são partes do produto operacional.\n\n### API, cache e distribuição\n\nEntrega configuração e telas com versionamento, ETag, cache policy e\ncorrelação. Representações populares podem ser pré-computadas e distribuídas,\ndesde que a chave de cache considere somente dimensões que realmente mudam o\nresultado.\n\n### Observabilidade\n\nMede revisão publicada, latência, cache hit, falha de validação, fallback e\ncomponente incompatível. A telemetria precisa ligar publicação a impacto sem\nregistrar dados pessoais ou sensíveis.\n\nO backend é dono da política de negócio e da autorização. Mesmo que o payload\nmostre o botão “Confirmar pedido”, o serviço de domínio deve autenticar,\nautorizar e validar a operação quando ela ocorrer. Visibilidade na interface\nnunca concede direito.\n\n## 7. Responsabilidades do cliente\n\nO cliente não é um terminal passivo. Ele contém o código executável, conhece o\nambiente real e tem a palavra final sobre o que consegue renderizar.\n\nSuas responsabilidades incluem:\n\n- buscar, revalidar e armazenar conteúdo com política offline;\n- validar o envelope e impedir payloads fora do schema;\n- negociar versões e capabilities sem presumir que o servidor acertará sempre;\n- mapear cada `type` para um componente nativo;\n- aplicar Design System, acessibilidade, responsividade e comportamento da\n  plataforma;\n- manter estado local e binding de dados;\n- executar apenas ações conhecidas e permitidas;\n- aplicar fallback por componente ou por tela;\n- emitir analytics e diagnóstico da renderização;\n- preservar telas nativas para fluxos que não cabem no modelo.\n\nO cliente também decide o que fazer quando um componente desconhecido chega.\nOmitir um banner opcional pode ser correto. Omitir os termos de uma confirmação\nimportante pode tornar a jornada enganosa; nesse caso, a tela inteira deve\nfalhar de forma segura.\n\n## 8. Como uma SDUI Engine costuma ser dividida\n\n```mermaid\nflowchart LR\n    Response[\"Resposta SDUI\"] --> Cache[\"Repository e cache local\"]\n    Cache --> Parser[\"Parser e schema validator\"]\n    Parser --> Compatibility[\"Compatibility manager\"]\n    Compatibility --> Registry[\"Component registry / factory\"]\n    Registry --> Renderers[\"Renderers nativos e Design System\"]\n    Renderers --> Tree[\"Árvore de UI nativa\"]\n\n    Compatibility -->|não suportado| Fallback[\"Fallback / error boundary\"]\n    Tree --> Actions[\"Action dispatcher e navegação\"]\n    Actions -->|ação permitida| Feature[\"Feature nativa / API\"]\n\n    Parser -. evento .-> Telemetry[\"Analytics, logs e métricas\"]\n    Compatibility -. evento .-> Telemetry\n    Fallback -. evento .-> Telemetry\n    Actions -. evento .-> Telemetry\n```\n\nO **repository** esconde rede e cache. O **parser** transforma o documento em\nmodelos tipados e rejeita estruturas inválidas. O **compatibility manager**\ncompara schema, versão e catálogo instalado.\n\nO **component registry** liga nomes estáveis — `text`, `card`, `button` — às\nimplementações nativas. A **factory** cria a view ou o nó declarativo\ncorrespondente. Os **renderers** aplicam tokens, temas, acessibilidade e\ncomportamentos do Design System.\n\nO **state/binding layer**, omitido do desenho para mantê-lo legível, resolve\nvalores dinâmicos e atualizações locais. O **action dispatcher** traduz ações\ndeclarativas para navegação ou chamadas permitidas. Ele usa allowlist: um texto\nrecebido do servidor nunca vira reflection, nome de classe ou URL arbitrária\nexecutada sem política.\n\nPor fim, **error boundaries** isolam falhas e **telemetry hooks** explicam o que\no usuário realmente recebeu. Sem isso, problemas ficam espalhados entre\nbackend, cache, modelo, renderer e feature nativa.\n\nO próprio bloco Mermaid é a fonte editável e reproduzível do diagrama.\n\n## 9. Vantagens, desvantagens e trade-offs\n\n### Granularidade dos componentes\n\nComponentes muito genéricos, como `container` com dezenas de propriedades,\ndão liberdade ao servidor, mas recriam uma engine de layout e multiplicam\ncombinações difíceis de testar. Componentes muito específicos, como\n`PromotionalRecommendationCard`, preservam qualidade, porém exigem release para\ncada nova ideia.\n\nUma boa base combina primitives controladas com componentes de domínio onde\nsemântica, acessibilidade ou segurança exigem comportamento fechado.\n\n### Controle do servidor versus autonomia do cliente\n\nQuanto mais decisões ficam no servidor, mais rápido é o rollout e mais\nconsistente é a segmentação. Em troca, o cliente perde contexto local e pode\nvirar uma engine complexa. Jornadas profundamente ligadas a sensores, câmera,\nNFC, animação ou estado transacional frequentemente funcionam melhor como\nfeatures nativas acionadas por SDUI.\n\n### Schema universal versus contrato por plataforma\n\nUm contrato único reduz divergência entre Android e iOS, mas pode nivelar a\nexperiência por baixo. Extensões por plataforma preservam convenções nativas,\nao custo de mais variantes e testes. O núcleo comum deve representar intenção;\ndetalhes inevitavelmente específicos podem ser extensões explícitas.\n\n### Prevenção versus reação\n\nO cliente pode informar versões suportadas para o backend evitar uma tela\nincompatível: **prevenção**. Ainda assim, deploy, cache ou declaração incorreta\npodem deixar um elemento desconhecido passar. O payload deve carregar sua\ncompatibilidade e o renderer aplicar fallback: **reação**.\n\nEm um contrato hipotético e simplificado, um cliente poderia fazer esta\nrequisição:\n\n```http\nGET /ui/v1/screens/home HTTP/1.1\nX-Client-Platform: android\nX-SDUI-Schema-Version: 2\nX-SDUI-Component-Versions: text=2,button=3,carousel=1\nX-Client-Capabilities: camera,biometrics\n```\n\nOs headers dizem que o cliente interpreta o schema 2 e possui renderers\nespecíficos para `text`, `button` e `carousel`. Eles não provam identidade nem\nconcedem permissão. Antes de responder, o backend compara essa declaração com\nos requisitos da revisão selecionada.\n\nSe a home exigir `carousel=2`, o backend pode, nesta ordem:\n\n1. selecionar uma revisão equivalente compatível com `carousel=1`;\n2. omitir o carousel, caso ele seja opcional e a tela continue correta;\n3. devolver um erro de incompatibilidade, caso o componente seja obrigatório.\n\nEnviar a revisão incompatível deve ser a última possibilidade, não o\ncomportamento normal. Mesmo assim, o cliente precisa estar preparado para\nreceber algo como:\n\n```json\n{\n  \"id\": \"recommendations\",\n  \"type\": \"carousel\",\n  \"compatibilityVersion\": [\"2\", \"3\"],\n  \"required\": false,\n  \"properties\": {\n    \"items\": []\n  }\n}\n```\n\nAo perceber que possui apenas `carousel=1`, o compatibility manager não entrega\nesse componente ao renderer. Como `required` é `false`, pode omiti-lo e\nregistrar telemetria. Se fosse obrigatório para compreender ou concluir a\njornada, o cliente deveria recusar a tela inteira e abrir um fallback seguro.\nEssa segunda verificação é a reação.\n\nAs duas estratégias se complementam. A primeira economiza falhas previsíveis;\na segunda protege no ponto em que o código realmente será executado. Catálogos\ngrandes não devem gerar headers infinitos: uma versão agregada ou manifest\nnegociado pode substituir a lista detalhada.\n\n### Performance e disponibilidade\n\nSDUI adiciona rede e parsing ao caminho de uma tela, mas também abre espaço para\ncache local, prefetch e revisões imutáveis. O aplicativo deve possuir\nlast-known content ou fallback nativo coerente. Conteúdo promocional e conteúdo\ncrítico de conta não podem compartilhar a mesma política de validade.\n\n### Complexidade distribuída\n\nUma alteração visual passa a envolver editor, validação, API, cache, schema,\nrenderer e analytics. O ganho de velocidade só aparece com preview,\ncontract tests, observabilidade e ownership claros. Sem plataforma e\ngovernança, SDUI troca releases mobile lentos por incidentes remotos rápidos.\n\n## 10. Segurança e limites\n\nDocumentos SDUI devem ser tratados como entrada não confiável mesmo quando vêm\nda própria infraestrutura. O cliente valida tamanho, profundidade, enums, URLs,\nações e versões. O backend valida publicação e nunca inclui segredos no\ndocumento.\n\nAs regras centrais são:\n\n- nenhuma execução de código remoto;\n- actions mapeadas para comandos nativos em allowlist;\n- autenticação e autorização repetidas no serviço de negócio;\n- URLs e assets restritos por política;\n- logs sem tokens, credenciais ou dados pessoais;\n- revisão auditável, rollback e limites de payload;\n- fallback seguro quando a compreensão parcial puder enganar o usuário.\n\nSDUI controla apresentação. Ele pode esconder uma feature indisponível para\nmelhorar a experiência, mas isso não substitui a recusa server-side quando uma\noperação não é permitida.\n\n## 11. Alternativas e quando não usar\n\nSDUI provavelmente não compensa quando a experiência é pequena e estável, a\nequipe não possui capacidade para manter uma plataforma, ou a tela depende de\ninteração altamente específica que mudará junto com código nativo.\n\n### Interface totalmente nativa\n\nÉ a alternativa com melhor integração à plataforma e menor complexidade de\nruntime. Funciona bem para experiências estáveis ou altamente interativas. O\ncusto é atrelar mudanças de composição ao ciclo de release e à adoção de cada\nversão do aplicativo.\n\n### Feature flags e configuração remota\n\nFlags podem habilitar uma feature, escolher uma variante ou alterar valores\nsimples sem introduzir uma linguagem de UI. São mais fáceis de operar, mas não\nmodelam bem árvores de componentes ou jornadas. Antes de criar uma engine,\nvale confirmar se alguns booleanos e parâmetros já resolvem a variação.\n\n### Conteúdo web incorporado\n\nUma WebView oferece grande liberdade e reutilização com a web, mas muda a\nnatureza da solução. Performance, acessibilidade, navegação, segurança e\nintegração nativa passam a seguir outros compromissos. Não é uma versão mais\nflexível de SDUI; é uma arquitetura diferente.\n\n### Abordagem híbrida\n\nTambém não é necessário escolher tudo ou nada. Uma estratégia híbrida pode usar\nSDUI na descoberta e composição da home, enquanto câmera, autenticação, edição\nrica e outras interações especializadas permanecem nativas. Ela reduz a\nsuperfície inicial da engine e cria espaço para aprender antes de expandir o\ncontrato.\n\nA pergunta prática não é “podemos serializar esta tela?”, mas:\n\n> Esta parte do produto muda com frequência suficiente para justificar um\n> contrato remoto, e conseguimos torná-la observável, compatível e segura?\n\n## 12. Critérios para escolher SDUI\n\nSDUI é uma decisão de plataforma, não apenas uma técnica de serialização. Antes\nde adotá-lo, vale avaliar quatro dimensões:\n\n| Pergunta | Sinal favorável | Sinal de alerta |\n|---|---|---|\n| A composição muda com frequência? | Há campanhas, segmentação e experimentos recorrentes | As telas são pequenas e estáveis |\n| Existe um catálogo reutilizável? | O Design System possui componentes maduros | Cada tela exige um componente exclusivo |\n| A organização sustenta a plataforma? | Há ownership, preview, publicação e observabilidade | Ninguém será dono do contrato e do renderer |\n| A falha pode degradar com segurança? | Há cache e fallback coerentes | Uma renderização parcial altera o sentido da jornada |\n\nUma adoção híbrida costuma ser um ponto de partida saudável: SDUI controla\ndescoberta, conteúdo e composição variável; experiências altamente interativas\nou sensíveis permanecem nativas. A fronteira pode se mover conforme o catálogo,\na governança e a capacidade operacional amadurecem.\n\nA decisão final deve comparar a velocidade esperada de evolução com o custo\npermanente da engine. Quando a principal motivação é apenas evitar um release\nmobile isolado, feature flags ou configuração remota podem resolver o problema\ncom menos infraestrutura.\n\n## 13. Glossário\n\n### Ações declarativas\n\nInstruções descritas no documento SDUI, como abrir uma tela, selecionar uma\nopção ou solicitar uma atualização. Elas não contêm código executável: o\ncliente traduz cada ação conhecida para um comportamento nativo permitido.\n\n### Allowlist\n\nLista explícita do que pode ser aceito. Em vez de tentar bloquear ações\nperigosas uma a uma, o cliente executa somente os tipos, destinos e protocolos\npreviamente cadastrados.\n\n### Binding de dados\n\nLigação entre uma propriedade visual e um valor. Por exemplo, associar o texto\nde um componente ao nome de um produto ou ao estado atual de um formulário.\n\n### Capabilities\n\nCapacidades que uma versão ou distribuição do aplicativo declara possuir, como\ncâmera, biometria ou determinado renderer. A declaração ajuda na composição,\nmas não deve ser tratada como autenticação ou autorização.\n\n### Catálogo de componentes\n\nConjunto de componentes que o cliente sabe renderizar. Ele funciona como o\nvocabulário visual do SDUI: pode conter tipos como `text`, `image`, `button`,\n`card` e componentes específicos de um domínio, cada um com propriedades e\nversões conhecidas.\n\n### Componente\n\nUnidade declarativa da interface. Possui um tipo, propriedades e, quando\naplicável, ações. O documento descreve o componente; a implementação visual\ncontinua no aplicativo.\n\n### Component registry e factory\n\nO **registry** é o mapa que relaciona um nome recebido, como `button`, ao\nrenderer nativo correspondente. A **factory** usa esse registro para criar a\ninstância correta com as propriedades do documento.\n\n### Contrato declarativo\n\nAcordo entre backend e cliente sobre a estrutura do documento: quais\ncomponentes existem, quais campos aceitam, como se aninham, quais ações são\nválidas e como as versões evoluem. Ele descreve intenção e dados, não uma\nsequência de código a executar.\n\n### Design System\n\nConjunto de padrões visuais e comportamentais de um produto, incluindo cores,\ntipografia, espaçamento, componentes e regras de acessibilidade. No SDUI, os\nrenderers nativos aplicam esse sistema aos componentes recebidos.\n\n### Envelope\n\nEstrutura externa da resposta SDUI. Normalmente reúne informações como ID da\ntela, versão do schema, revisão, componentes e metadados, antes do conteúdo\nespecífico de cada componente.\n\n### Error boundary e fallback\n\n**Error boundary** é a fronteira que impede uma falha localizada de derrubar\ntoda a experiência. **Fallback** é a alternativa segura usada quando algo não\npode ser renderizado: omitir um elemento opcional, mostrar uma representação\nsimplificada ou abrir uma tela nativa.\n\n### Feature flag\n\nChave remota usada para habilitar, desabilitar ou variar um comportamento. É\nmais simples que SDUI e pode ser suficiente quando a necessidade é apenas\ncontrolar disponibilidade, sem descrever uma árvore de interface.\n\n### Last-known content\n\nÚltima revisão válida armazenada pelo cliente. Pode sustentar uma experiência\ndurante falhas de rede, desde que exista uma política clara de validade e que o\nconteúdo ainda seja seguro para reutilização.\n\n### Parser e schema validator\n\nO **parser** transforma JSON ou outro formato de transporte em modelos que o\naplicativo entende. O **schema validator** verifica tipos, campos obrigatórios,\nlimites e combinações permitidas antes que o documento chegue ao renderer.\n\n### Renderer\n\nCódigo nativo responsável por transformar um componente declarativo em\ninterface visível e interativa. É nele que entram layout, tema, acessibilidade,\nestado e comportamento da plataforma.\n\n### Rollout e rollback\n\n**Rollout** é a liberação gradual de uma revisão para parte dos usuários,\nplataformas ou regiões. **Rollback** é o retorno controlado a uma revisão\nanterior quando a publicação apresenta problemas.\n\n### Schema e versão de compatibilidade\n\nO **schema** define a forma válida do documento. A **versão de\ncompatibilidade** indica quais versões de contrato ou renderer conseguem\ninterpretar uma representação sem alterar seu significado.\n\n### SDUI Engine\n\nConjunto de módulos do cliente que recebe, valida e renderiza documentos SDUI.\nGeralmente inclui networking, cache, parser, validação, compatibilidade,\ncatálogo de componentes, renderers, estado, ações, fallback e telemetria.\n\n### Targeting e segmentação\n\nSeleção da experiência com base em contexto, como plataforma, locale, versão,\nregião ou grupo experimental. Esses sinais orientam apresentação, mas não\nsubstituem regras server-side de permissão.\n\n### Telemetria e observabilidade\n\n**Telemetria** são os sinais produzidos pelo sistema, como eventos, métricas,\nlogs e traces. **Observabilidade** é a capacidade de usar esses sinais para\nentender qual revisão foi entregue, como foi renderizada e onde uma falha\naconteceu.\n\n### WebView\n\nComponente nativo que incorpora conteúdo web dentro do aplicativo. Diferente\nde SDUI, normalmente executa HTML, CSS e JavaScript em um ambiente de browser,\ncom outra superfície de segurança, integração e performance.\n\n## 14. Conclusão\n\nSDUI desloca parte da composição para o servidor, mas não remove a engenharia\ndo cliente. O backend ganha capacidade de selecionar, publicar e observar\nexperiências; o aplicativo assume a responsabilidade de interpretar o contrato\ncom componentes nativos, compatibilidade explícita e fallback seguro.\n\nO valor não está no JSON. Ele aparece quando catálogo, contrato, publicação,\ncache e observabilidade formam uma plataforma coerente. Sem essas peças, a\nvelocidade prometida apenas transfere complexidade do release mobile para o\nruntime.\n\nAdotar SDUI faz sentido quando a variabilidade do produto paga esse custo\ncontínuo. Nos demais casos, interface nativa, flags ou uma solução híbrida\npodem ser escolhas arquiteturais mais simples e igualmente válidas.\n\n## 15. Materiais de apoio\n\n### Exemplos oficiais\n\n- [Samsung Wallet — Manage Wallet Card e Flexible Layout](https://developer.samsung.com/wallet/addtosamsungwallet/managewalletcard.html#Configure-the-Wallet-card-layout)\n- [Google Wallet — Como Passes Classes e Objects funcionam](https://developers.google.com/wallet/generic/overview/how-classes-objects-work)\n- [Google Wallet — Generic Pass Builder](https://developers.google.com/wallet/generic/resources/pass-builder)\n- [Google Wallet — `ClassTemplateInfo` e `CardTemplateOverride`](https://developers.google.com/wallet/reference/rest/v1/ClassTemplateInfo)\n- [Apple Wallet — Creating a generic pass](https://developer.apple.com/documentation/walletpasses/creating-a-generic-pass)\n\n### Referências técnicas\n\n- [JSON Schema](https://json-schema.org/)\n- [Mermaid](https://mermaid.js.org/)\n- [W3C — Web Content Accessibility Guidelines](https://www.w3.org/WAI/standards-guidelines/wcag/)\n\n## Contato\n\nQuer conversar sobre Android, arquitetura mobile, Design Systems ou\nServer-Driven UI?\n\nVocê pode me encontrar nos seguintes canais:\n\n* **LinkedIn:** [@JosielManzonni](https://www.linkedin.com/in/josielmanzonni)\n* **GitHub:** [@JosielManzonni](https://github.com/JosielManzonni)\n* **E-mail:** [josiel.manzonni@gmail.com](mailto:josiel.manzonni@gmail.com)\n* **Medium:** siga meu perfil para acompanhar meus próximos artigos sobre\n  engenharia de software.\n\nSugestões, correções e contribuições técnicas são sempre bem-vindas. Se este\nconteúdo foi útil, deixe um comentário, compartilhe o artigo e acompanhe os\npróximos capítulos.",
+      "sourcePath": "sdui-service/articles/medium/01-o-que-e-sdui.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/article-sdui-002",
+      "@type": [
+        "schema:TechArticle"
+      ],
+      "title": "Contract-first no backend do Pix — fronteiras que escalam",
+      "status": "draft",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-sdui",
+      "created": "2026-07-29",
+      "updated": "2026-07-30",
+      "tags": [
+        "article",
+        "construindo-o-pix",
+        "contract-first",
+        "fastapi",
+        "openapi",
+        "sdui"
+      ],
+      "content": "# Contract-first no backend do Pix: fronteiras que escalam\n\n## Como separar SDUI, decoding, payment e observability antes que os contratos criem um monólito distribuído\n\n**Descrição para o Medium:** Neste capítulo da série Construindo o Pix,\nseparamos quatro contratos OpenAPI, implementamos a primeira fonte do SDUI e\npreparamos uma arquitetura de leitura para escalar sem misturar apresentação,\ndecoding, pagamentos e sinais operacionais.\n\n<!--\nPROMPT PARA A IMAGEM DE CAPA\n\nCrie uma ilustração editorial horizontal, proporção 16:9, em visão totalmente\nfrontal, sobre arquitetura contract-first. Organize todos os elementos no mesmo\nplano, voltados diretamente para o leitor, sem perspectiva panorâmica, ângulo\nlateral ou visão de cima. Mostre quatro serviços independentes — interface,\ndecoding, pagamento e observabilidade — como módulos frontais separados, cada\num ligado ao seu próprio documento de contrato abstrato. Mostre um smartphone\nde frente consumindo apenas o serviço de interface. Destaque fronteiras claras,\nescalabilidade independente, cache local e revisões imutáveis, sem transformar\na composição em fluxograma.\n\nDireção de arte: tecnologia editorial sofisticada, formas 2D limpas,\nalinhamento frontal, profundidade mínima, fundo azul-marinho e grafite, acentos\nverde-menta e azul elétrico, iluminação suave, alto contraste e espaço negativo\npara capa do Medium. Não incluir palavras, números, código legível, logos,\nmarcas, moedas, robôs, estética cyberpunk, perspectiva isométrica ou composição\nem profundidade.\n-->\n\n> Um contrato compartilhado pode parecer conveniente hoje e se tornar a forma\n> mais silenciosa de acoplar serviços amanhã.\n\n## Aviso importante\n\nEste projeto é experimental e educacional. Ele não é uma implementação oficial\ndo Pix, não é homologado, não possui suporte institucional, não executa\npagamentos reais e não deve ser usado em produção.\n\n## Índice\n\n1. [Contexto](#1-contexto-quatro-serviços-quatro-vocabulários)\n2. [Motivação](#2-motivação-o-monólito-distribuído-começa-no-schema)\n3. [Decisão arquitetural](#3-decisão-arquitetural)\n4. [Alternativas consideradas](#4-alternativas-consideradas)\n5. [Visão da arquitetura](#5-visão-da-arquitetura)\n6. [Como escalar as leituras](#6-como-escalar-as-leituras-do-sdui)\n7. [Implementação inicial](#7-implementação-inicial)\n8. [Documentação das decisões](#8-documentação-das-decisões)\n9. [Trade-offs](#9-trade-offs)\n10. [Conclusão](#10-conclusão)\n\n## 1. Contexto: quatro serviços, quatro vocabulários\n\nO backend foi dividido em quatro domínios, cada um com seu próprio\n`contracts/openapi.yaml`:\n\n| Serviço | Responsabilidade pública | O que não deve possuir |\n|---|---|---|\n| SDUI | configuração mobile, features e telas | estado ou autorização de pagamento |\n| Decoding | interpretar e normalizar payload Pix/BR Code | iniciar pagamentos |\n| Payment | lifecycle, idempotência e transições do pagamento | strings e componentes de UI |\n| Observability | liveness, readiness e métricas operacionais | comandos de negócio |\n\nO primeiro incremento executável é o SDUI. Ele lê `configuration.json` e\n`screens.json` e expõe:\n\n```http\nGET /mobile/v1/configuration\nGET /mobile/v1/screens/{screenId}\n```\n\nO primeiro endpoint entrega features visíveis e habilitadas. O segundo entrega\na composição da tela identificada por `screenId`. Arquivos locais permitem\nvalidar contrato e comportamento HTTP antes de banco, migrations, Admin Portal\nou workflow de publicação.\n\nDecoding, payment e observability ainda são contratos e decisões propostas.\nEssa diferença fica explícita: contrato descreve uma fronteira; não prova que o\nserviço já está implementado.\n\n## 2. Motivação: o monólito distribuído começa no schema\n\nOpenAPI não é apenas a página de documentação. Ele registra o vocabulário\npúblico e o ownership de cada domínio. Se todos importarem o mesmo conjunto de\nschemas, um componente visual pode começar a referenciar `PaymentStatus`, e uma\noperação de pagamento pode ganhar campos de apresentação.\n\nPor exemplo, esta resposta seria um sinal de fronteira quebrada:\n\n```json\n{\n  \"screenId\": \"payment_result\",\n  \"payment\": {\n    \"internalStatus\": \"AUTHORIZED\",\n    \"ledgerEntryId\": \"...\"\n  },\n  \"components\": []\n}\n```\n\nO SDUI recebeu detalhes internos do aggregate para montar uma tela. Agora uma\nmudança no modelo de pagamentos altera também contrato, fixtures e deploy da\ncamada de experiência. Existem vários deployables, mas uma única unidade de\nmudança: um monólito distribuído.\n\nO esperado é o SDUI trabalhar com uma representação apropriada, como título,\nestado visual e action ID, enquanto o Payment Service preserva dados e regras\ndo lifecycle.\n\n## 3. Decisão arquitetural\n\nA decisão é manter um OpenAPI local por bounded context e compartilhar somente\nconvenções transversais, não modelos de negócio.\n\nAs alternativas e os limites dessa proposta estão detalhados na\n[RFC-PLATFORM-001 — Contract-first service boundaries](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/docs/architecture/rfcs/RFC-PLATFORM-001-contract-first-service-boundaries.md).\nA escolha de manter contratos locais por serviço foi formalizada na\n[ADR-PLATFORM-001 — Service-local OpenAPI contracts](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/docs/architecture/adrs/ADR-PLATFORM-001-service-local-openapi-contracts.md).\n\n```text\ndecoding-service/contracts/openapi.yaml\nobservability-service/contracts/openapi.yaml\npayment-service/contracts/openapi.yaml\nsdui-service/contracts/openapi.yaml\n```\n\nCada contrato documenta apenas operações, erros, headers e schemas pertencentes\nàquela camada. Correlação, Problem Details e tracing podem seguir a mesma\nconvenção, mas cada serviço mantém sua definição pública e seu ciclo de release.\n\nUma mudança no `ScreenComponent` deve exigir validação do SDUI e dos clientes,\nnão recompilação do Payment Service.\n\n## 4. Alternativas consideradas\n\n### Um OpenAPI para toda a plataforma\n\nSimplifica descoberta e geração centralizada. Em troca, torna ownership\nambíguo, favorece referências cruzadas e faz uma mudança local parecer um\nrelease global.\n\n### Pacote compartilhado de modelos\n\nReduz repetição no curto prazo. O custo aparece quando classes “comuns” passam\na carregar semântica de vários domínios e precisam manter compatibilidade com\nconsumidores que nem usam aquele conceito.\n\n### Contratos code-first\n\nDiminuem o trabalho inicial porque a documentação nasce das rotas. Porém, o\nmodelo interno tende a vazar para a API e a revisão da fronteira acontece tarde,\ndepois que o código já escolheu tipos e dependências.\n\nPara este projeto, a duplicação controlada de schemas transversais custa menos\nque o acoplamento de modelos de negócio.\n\n## 5. Visão da arquitetura\n\n```mermaid\nflowchart LR\n    Mobile[Mobile App]\n    LocalCache[(Local SDUI Cache)]\n\n    SDUI[SDUI Service]\n    SDUIContract[(SDUI OpenAPI)]\n    RepresentationCache[(Representation Cache)]\n\n    Decoding[Decoding Service]\n    DecodingContract[(Decoding OpenAPI)]\n\n    Payment[Payment Service]\n    PaymentContract[(Payment OpenAPI)]\n\n    Observability[Observability Service]\n    ObsContract[(Observability OpenAPI)]\n\n    Mobile <--> LocalCache\n    Mobile -->|configuration and screens| SDUI\n    Mobile -->|raw Pix payload| Decoding\n    Mobile -->|payment commands| Payment\n\n    SDUI --- SDUIContract\n    Decoding --- DecodingContract\n    Payment --- PaymentContract\n    Observability --- ObsContract\n\n    SDUI -.-> RepresentationCache\n    Decoding -. normalized instruction .-> Payment\n\n    SDUI -. signals .-> Observability\n    Decoding -. signals .-> Observability\n    Payment -. signals .-> Observability\n```\n\nA ligação entre decoding e payment representa compatibilidade semântica: uma\ninstrução normalizada pode alimentar a criação de pagamento, sem autorizar\nbanco ou classes compartilhadas. Observability recebe sinais, não comandos.\n\nA fonte editável está em\n[`docs/diagrams/01-backend-contract-boundaries.mmd`](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/docs/diagrams/01-backend-contract-boundaries.mmd).\n\n## 6. Como escalar as leituras do SDUI\n\nSeparar contratos não aumenta throughput por si só. O ganho é permitir que cada\nfronteira escale de acordo com sua carga. SDUI possui leitura predominante;\npayment exige consistência e concorrência; decoding pode permanecer stateless e\nconsumir CPU.\n\nPara milhões de usuários, o caminho de leitura pode evoluir assim:\n\n1. **Cache local:** enquanto `max-age` estiver válido, o aplicativo reutiliza a\n   resposta; depois, `If-None-Match` permite revalidar com `304`.\n2. **Last-known content:** uma revisão validada sustenta abertura offline ou\n   degradação temporária, respeitando validade do conteúdo.\n3. **Cache de representação:** o backend armazena a tela resolvida por uma\n   chave com apenas as dimensões que alteram a resposta.\n4. **Revisões imutáveis:** publicar ou reverter troca o ponteiro da revisão\n   ativa, sem editar documentos já distribuídos.\n5. **Instâncias stateless:** os nós deixam de depender do filesystem e escalam\n   horizontalmente.\n\n`Vary` precisa refletir país, locale, build ou capability quando esses valores\nmudam a representação. Omitir uma dimensão pode entregar conteúdo incorreto;\nincluir dimensões irrelevantes explode a cardinalidade do cache.\n\n## 7. Implementação inicial\n\nA stack usada neste milestone é:\n\n- Python, FastAPI e Uvicorn para a aplicação HTTP;\n- Pydantic v2 para validar modelos;\n- OpenAPI 3.0.3 como contrato público;\n- modelos previamente gerados com `fastapi-code-generator`;\n- pytest, HTTPX e pytest-cov para testes.\n\nMesmo com JSON estático, o endpoint não devolve um `dict` sem validação:\n\n```python\nconfiguration = AppConfiguration.model_validate(read_configuration())\nscreen = Screen.model_validate(read_screen(screen_id))\n```\n\nO filesystem é uma fonte temporária, não parte do contrato. Isso permite\nsubstituí-lo depois por repositório versionado sem mudar o modelo HTTP.\nA justificativa, as consequências e os critérios para abandonar essa fonte\nestão registrados na\n[ADR-SDUI-002 — Static JSON runtime source](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/sdui-service/articles/adrs/ADR-SDUI-002-static-json-runtime-source.md).\n\n## 8. Documentação das decisões\n\nRFCs registram propostas e alternativas; ADRs registram decisões e\nconsequências. Cada nota possui ID, contexto, status, tags e relações tipadas.\nO Markdown é autoritativo e um script gera JSON-LD para busca semântica.\n\nAssim, uma mudança futura encontra o motivo para contratos locais e para a\nfonte estática, em vez de inferi-lo apenas pela estrutura das pastas.\n\n## 9. Trade-offs\n\n**Ganhamos:** ownership por domínio, releases independentes, cache adequado ao\nworkload e contratos legíveis por pessoas e tooling.\n\n**Pagamos:** repetição controlada de convenções, mais documentos para manter e\nnecessidade de validar referências entre contratos sem criar dependência entre\nclasses.\n\n**Aceitamos agora:** JSON estático, ausência de Admin API e serviços ainda não\nimplementados. Nenhuma dessas limitações deve ser escondida por um schema\ndetalhado.\n\n## 10. Conclusão\n\nContract-first funciona como mecanismo de design quando o contrato limita o que\ncada serviço pode conhecer. A separação prepara scaling units coerentes:\nleituras de tela podem usar cache e distribuição sem arrastar o lifecycle de\npagamentos para o mesmo caminho.\n\nO próximo artigo tratará outra pergunta: como o servidor evita telas\nincompatíveis sem fingir que conhece perfeitamente o renderer instalado?\n\n## 11. Materiais de apoio\n\n- [Repositório do projeto](https://github.com/JosielManzonni/pix-jsr-backend)\n- [Contratos OpenAPI](https://github.com/JosielManzonni/pix-jsr-backend)\n- [Fonte do diagrama](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/docs/diagrams/01-backend-contract-boundaries.mmd)\n- [RFC-PLATFORM-001 — Contract-first service boundaries](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/docs/architecture/rfcs/RFC-PLATFORM-001-contract-first-service-boundaries.md)\n- [ADR-PLATFORM-001 — Service-local OpenAPI contracts](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/docs/architecture/adrs/ADR-PLATFORM-001-service-local-openapi-contracts.md)\n- [ADR-SDUI-002 — Static JSON runtime source](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/sdui-service/articles/adrs/ADR-SDUI-002-static-json-runtime-source.md)\n- [OpenAPI Specification 3.0.3](https://spec.openapis.org/oas/v3.0.3)\n- [FastAPI](https://fastapi.tiangolo.com/)\n- [Pydantic](https://docs.pydantic.dev/)\n- [Mermaid](https://mermaid.js.org/)\n\n## Contato\n\nQuer conversar sobre Pix, Open Finance, Android, arquitetura de pagamentos ou\nServer-Driven UI?\n\n* **LinkedIn:** [@JosielManzonni](https://www.linkedin.com/in/josielmanzonni)\n* **GitHub:** [@JosielManzonni](https://github.com/JosielManzonni)\n* **E-mail:** [josiel.manzonni@gmail.com](mailto:josiel.manzonni@gmail.com)\n* **Medium:** siga meu perfil para acompanhar os próximos artigos da série\n  **Construindo o Pix**.",
+      "sourcePath": "sdui-service/articles/medium/02-contract-first-sdui-backend.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ],
+      "explains": [
+        "https://openpix.dev/knowledge/adr-platform-001",
+        "https://openpix.dev/knowledge/adr-sdui-002",
+        "https://openpix.dev/knowledge/rfc-platform-001"
+      ],
+      "relatedTo": [
+        "https://openpix.dev/knowledge/article-sdui-003"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/article-sdui-003",
+      "@type": [
+        "schema:TechArticle"
+      ],
+      "title": "Compatibilidade SDUI — prevenção no backend, reação no cliente",
+      "status": "draft",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-sdui",
+      "created": "2026-07-30",
+      "updated": "2026-07-30",
+      "tags": [
+        "article",
+        "compatibility",
+        "construindo-o-pix",
+        "fastapi",
+        "mobile",
+        "sdui"
+      ],
+      "content": "# Compatibilidade SDUI: prevenção no backend, reação no cliente\n\n## Como negociar versões sem transferir a responsabilidade final do renderer para o servidor\n\n**Descrição para o Medium:** Depois de separar os contratos do backend,\nimplementamos headers de contexto e uma defesa em duas camadas: o servidor evita\nincompatibilidades conhecidas e o cliente valida novamente antes de renderizar.\n\n<!--\nPROMPT PARA A IMAGEM DE CAPA\n\nCrie uma ilustração editorial horizontal, proporção 16:9, em visão totalmente\nfrontal, sobre compatibilidade em Server-Driven UI. Organize todos os elementos\nno mesmo plano, voltados diretamente para o leitor, sem perspectiva panorâmica,\nângulo lateral ou visão de cima. Mostre um backend frontal e um smartphone visto\nde frente, conectados por uma ponte horizontal de componentes declarativos.\nSinais pequenos viajam do cliente ao servidor, representando versões suportadas\ne prevenção. Na tela do smartphone, uma segunda barreira verifica os\ncomponentes, aceita os compatíveis e conduz um componente incompatível para um\nfallback, representando reação.\n\nDireção de arte: tecnologia editorial sofisticada, formas 2D limpas,\nalinhamento frontal, profundidade mínima, fundo azul-marinho e grafite, acentos\nverde-menta e azul elétrico, iluminação suave, composição central clara e\nespaço negativo para capa do Medium. Não incluir palavras, números, código\nlegível, logos, moedas, cadeados gigantes, robôs, excesso de conexões,\nperspectiva isométrica ou composição em profundidade.\n-->\n\n> O backend pode evitar erros previsíveis. Só o cliente sabe qual renderer\n> realmente está instalado.\n\n## Aviso importante\n\nEste projeto é experimental e educacional. Ele não é uma implementação oficial\ndo Pix, não é homologado, não possui suporte institucional, não executa\npagamentos reais e não deve ser usado em produção.\n\n## Índice\n\n1. [Contexto](#1-contexto-versão-do-app-não-é-versão-do-renderer)\n2. [O contexto da requisição](#2-o-contexto-da-requisição)\n3. [Decisão arquitetural](#3-decisão-arquitetural)\n4. [Prevenção no backend](#4-prevenção-no-backend)\n5. [Reação no cliente](#5-reação-no-cliente)\n6. [Fluxo completo](#6-fluxo-completo)\n7. [Implementação](#7-implementação)\n8. [Erros, segurança e observabilidade](#8-erros-segurança-e-observabilidade)\n9. [Testes](#9-testes-e-critérios-de-aceitação)\n10. [Trade-offs e conclusão](#10-trade-offs-e-conclusão)\n\n## 1. Contexto: versão do app não é versão do renderer\n\nA solução ingênua seria receber `X-App-Version` e presumir tudo: clientes novos\nrenderizam qualquer tela; clientes antigos são bloqueados. Um único número,\nporém, mistura dimensões diferentes:\n\n- versão comercial e build;\n- versão do envelope SDUI;\n- versões dos componentes nativos;\n- capabilities instaladas;\n- país, locale, timezone e moeda.\n\nUm app pode atualizar networking sem alterar o renderer. Dois bundles podem\ncompartilhar a versão comercial e possuir features diferentes. Inferir essa\nmatriz apenas do build cria regras escondidas no servidor.\n\nNo extremo oposto, enviar qualquer documento e deixar o cliente resolver\ndesperdiça rede e descobre tarde uma incompatibilidade que o backend já\nconhecia. A saída é combinar prevenção e reação.\n\n## 2. O contexto da requisição\n\nUma forma lúdica de pensar no request é um restaurante: `screenId` é o prato\npedido; os headers informam idioma, utensílios disponíveis e versões da receita\nque o cliente consegue interpretar. Eles ajudam a cozinha, mas não comprovam a\nidentidade de quem fez o pedido.\n\n```http\nGET /mobile/v1/screens/pix_home HTTP/1.1\nX-App-Platform: android\nX-App-Version: 1.4.2\nX-App-Build: 10402\nX-App-Package: com.openpix.jsr\nX-Country-Code: BR\nAccept-Language: pt-BR\nX-App-Capabilities: PIX_QR,PIX_NFC,PAYMENT\nX-SDUI-Contract-Version: 1\nX-SDUI-Component-Versions: text=1,spacer=1,feature=1\n```\n\n`pix_home` é um identificador público e estável. Ele não é ID de banco, revision\nID ou nome de classe Android. A revisão publicada pode mudar sem alterar o\n`screenId`.\n\n| Grupo | Exemplos | Uso |\n|---|---|---|\n| App | platform, version, build, package | compatibilidade e diagnóstico |\n| Região | country, language, timezone, currency | localização explícita |\n| Produto | capabilities | seleção de entradas disponíveis |\n| SDUI | contract e component versions | negociação do renderer |\n| Diagnóstico | correlation ID e trace context | conexão de logs e traces |\n| Cache | ETag e `If-None-Match` | reutilização e revalidação |\n\nTodos os valores enviados pelo aplicativo são declarações não confiáveis.\nCapabilities podem orientar composição; nunca concedem autorização.\n\n## 3. Decisão arquitetural\n\nA decisão é negociar compatibilidade em duas direções:\n\n1. o cliente declara o que acredita suportar;\n2. o servidor evita incompatibilidades conhecidas;\n3. a resposta permanece autodescritiva;\n4. o cliente valida novamente antes de renderizar.\n\nO contexto enviado pelo aplicativo, os limites dos headers e as duas barreiras\nde compatibilidade são propostos na\n[RFC-SDUI-001 — Mobile context and component compatibility](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/sdui-service/articles/rfcs/RFC-SDUI-001-mobile-context-and-component-compatibility.md).\n\n`contractVersion` identifica a forma do documento. `revision` identifica o\nconteúdo publicado. A versão no path, como `/mobile/v1`, identifica a API. Os\ntrês conceitos não são intercambiáveis.\n\n## 4. Prevenção no backend\n\nConsidere que a tela exige `text=1`, `spacer=1` e `feature=2`, mas o request\ndeclara `feature=1`. O backend compara o catálogo declarado com a revisão\nselecionada antes de responder.\n\nEle pode, nesta ordem:\n\n1. escolher uma revisão equivalente compatível;\n2. omitir o componente, caso seja opcional e a tela preserve seu sentido;\n3. responder `406` quando o componente incompatível for obrigatório.\n\nUm erro estruturado poderia ser:\n\n```json\n{\n  \"type\": \"https://openpix.dev/problems/sdui-unsupported-component\",\n  \"title\": \"Unsupported SDUI component\",\n  \"status\": 406,\n  \"detail\": \"The client cannot render: feature.\",\n  \"code\": \"SDUI_UNSUPPORTED_COMPONENT\",\n  \"correlationId\": \"...\"\n}\n```\n\n`code` é estável para lógica de cliente. `detail` serve ao diagnóstico seguro,\nsem stack trace ou dados sensíveis.\n\nO header de componentes precisa de limites de tamanho e quantidade. Se o\ncatálogo crescer, uma versão agregada ou manifest negociado deve substituir a\nlista, em vez de criar headers ilimitados.\n\n## 5. Reação no cliente\n\nMesmo após a prevenção, deploys, caches e declarações incorretas podem deixar\numa incompatibilidade atravessar. Cada componente carrega as versões capazes de\ninterpretar sua representação:\n\n```json\n{\n  \"id\": \"home_title\",\n  \"type\": \"text\",\n  \"compatibilityVersion\": [\"1\"],\n  \"text\": \"Como deseja pagar?\",\n  \"style\": \"title\"\n}\n```\n\nO cliente consulta seu registry. Se o tipo e a versão forem conhecidos,\nrenderiza o componente nativo. Se forem desconhecidos:\n\n- omite e registra telemetria quando o elemento é opcional;\n- usa uma representação alternativa quando existe fallback válido;\n- bloqueia a tela quando a compreensão parcial poderia enganar o usuário.\n\nEssa é a última barreira porque somente o aplicativo conhece o código realmente\ninstalado. Uma resposta `200` do backend não substitui a validação local.\n\n## 6. Fluxo completo\n\n```mermaid\nsequenceDiagram\n    participant Client as Mobile Renderer\n    participant API as SDUI Service\n    participant Source as Static JSON\n\n    Client->>API: GET screen + context + supported versions\n    API->>Source: Read published document\n    Source-->>API: Screen revision\n    API->>API: Validate schema and compatibility\n\n    alt compatible\n        API-->>Client: 200 Screen + compatibilityVersion + ETag\n        Client->>Client: Validate registry and render\n    else known incompatibility\n        API-->>Client: 406 Problem Details\n        Client->>Client: Open safe fallback\n    else matching ETag\n        API-->>Client: 304 Not Modified\n    end\n```\n\nA fonte editável está em\n[`docs/diagrams/02-sdui-compatibility-negotiation.mmd`](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/docs/diagrams/02-sdui-compatibility-negotiation.mmd).\n\n## 7. Implementação\n\nFastAPI permite capturar os headers uma vez com dependências tipadas:\n\n```python\nMobileContext = Annotated[\n    MobileRequestContext,\n    Depends(get_mobile_request_context),\n]\n\nSduiContext = Annotated[\n    SduiRequestContext,\n    Depends(get_sdui_request_context),\n]\n```\n\n`get_sdui_request_context` reutiliza o contexto móvel e acrescenta apenas\ncontract e component versions. Isso preserva tipos, documentação runtime e\ndependency injection; um decorator genérico esconderia informações relevantes\ndo framework.\n\nEssa escolha de implementação está formalizada na\n[ADR-SDUI-001 — Typed request-context dependencies](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/sdui-service/articles/adrs/ADR-SDUI-001-typed-request-context-dependencies.md),\nincluindo as consequências para testes e evolução dos headers.\n\nDepois de validar o JSON com Pydantic, o servidor compara cada componente:\n\n```python\nunsupported = {\n    component.root.type\n    for component in screen.components\n    if str(context.component_versions.get(component.root.type))\n    not in component.root.compatibilityVersion\n}\n```\n\nO ETag é calculado sobre JSON canônico. A mesma representação produz o mesmo\nvalidator; `If-None-Match` correspondente devolve `304` sem body.\n\n## 8. Erros, segurança e observabilidade\n\nOs resultados implementados incluem:\n\n- `400 CONTEXT_INVALID_REQUEST` para header ausente ou inválido;\n- `404` para configuração ou tela ausente;\n- `406` para contrato ou componente incompatível;\n- `500` para recurso ou schema interno inválido;\n- `304` para ETag correspondente.\n\nTimeout de rede exige retry limitado, last-known content e fallback no cliente.\nValidation error não deve ser repetido automaticamente.\n\nSegurança significa validar formato, tamanho, profundidade, versões e actions.\nHeaders de app, país e capabilities não comprovam identidade. Uma feature\nvisível continua sujeita à autenticação e autorização no serviço de negócio.\nLogs não devem conter autorização, payload Pix, chave, conta ou documento.\n\nMétricas úteis incluem requests, not found, validation failures, revisão\npublicada, latência e cache hit. Correlation ID conecta logs e traces, mas não\ndeve virar label de métrica por sua alta cardinalidade.\n\n## 9. Testes e critérios de aceitação\n\nA suíte cobre leitura dos recursos, headers, correlação, incompatibilidades,\nestabilidade do ETag e respostas `200`, `304`, `400`, `404`, `406` e `500`.\n\nResultado validado neste milestone:\n\n```text\n27 testes aprovados\n98,62% de cobertura\n```\n\nCobertura não prova qualidade sozinha. Aqui ela é útil porque os testes\natravessam decisões de contrato e fallback, não apenas getters.\n\n## 10. Trade-offs e conclusão\n\nCompatibilidade apenas no cliente simplifica o servidor, mas descobre tarde\nerros previsíveis. Compatibilidade apenas no backend ignora que o renderer real\npode divergir da declaração recebida.\n\nA combinação aceita duplicação de informação e uma matriz que precisa de\nlimites. Em troca, prevenção reduz tráfego e falhas conhecidas; reação protege\nno ponto em que o código será executado.\n\nO servidor não garante que o cliente renderizará corretamente. O cliente não\npresume que toda resposta válida é compatível. Essa tensão explícita é mais\nsegura que atribuir toda a responsabilidade a apenas um lado.\n\n## 11. Materiais de apoio\n\n- [Repositório do projeto](https://github.com/JosielManzonni/pix-jsr-backend)\n- [Contrato OpenAPI do SDUI](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/sdui-service/contracts/openapi.yaml)\n- [Código do SDUI Service](https://github.com/JosielManzonni/pix-jsr-backend/tree/main/sdui-service)\n- [Fonte do diagrama](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/docs/diagrams/02-sdui-compatibility-negotiation.mmd)\n- [RFC-SDUI-001 — Mobile context and component compatibility](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/sdui-service/articles/rfcs/RFC-SDUI-001-mobile-context-and-component-compatibility.md)\n- [ADR-SDUI-001 — Typed request-context dependencies](https://github.com/JosielManzonni/pix-jsr-backend/blob/main/sdui-service/articles/adrs/ADR-SDUI-001-typed-request-context-dependencies.md)\n- [FastAPI — Dependencies](https://fastapi.tiangolo.com/tutorial/dependencies/)\n- [Pydantic — Models](https://docs.pydantic.dev/latest/concepts/models/)\n- [RFC 9457 — Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html)\n- [W3C Trace Context](https://www.w3.org/TR/trace-context/)\n\n## Contato\n\nQuer conversar sobre Pix, Open Finance, Android, arquitetura de pagamentos ou\nServer-Driven UI?\n\n* **LinkedIn:** [@JosielManzonni](https://www.linkedin.com/in/josielmanzonni)\n* **GitHub:** [@JosielManzonni](https://github.com/JosielManzonni)\n* **E-mail:** [josiel.manzonni@gmail.com](mailto:josiel.manzonni@gmail.com)\n* **Medium:** siga meu perfil para acompanhar os próximos artigos da série\n  **Construindo o Pix**.",
+      "sourcePath": "sdui-service/articles/medium/03-sdui-compatibility-prevention-reaction.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ],
+      "explains": [
+        "https://openpix.dev/knowledge/adr-sdui-001",
+        "https://openpix.dev/knowledge/rfc-sdui-001"
+      ],
+      "relatedTo": [
+        "https://openpix.dev/knowledge/article-sdui-002"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/ctx-decoding",
+      "@type": [
+        "openpix:ArchitectureContext",
+        "skos:Concept"
+      ],
+      "title": "Pix Payload Decoding Context",
+      "status": "active",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-decoding",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "br-code",
+        "context",
+        "decoding",
+        "pix"
+      ],
+      "content": "# Pix Payload Decoding\n\nContexto responsável por validar e normalizar payloads Pix/BR Code. A saída é\numa instrução interpretada; criar ou persistir um pagamento pertence ao\nPayment Context.\n\n## Knowledge graph\n\n- [[RFC-DECODING-001-pix-payload-decoding-boundary]]\n- [[ADR-DECODING-001-stateless-payload-decoding]]\n- [[CTX-PAYMENT]]\n- [[CTX-OBSERVABILITY]]",
+      "sourcePath": "docs/architecture/contexts/CTX-DECODING.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "dependsOn": [
+        "https://openpix.dev/knowledge/ctx-platform"
+      ],
+      "observedBy": [
+        "https://openpix.dev/knowledge/ctx-observability"
+      ],
+      "producesFor": [
+        "https://openpix.dev/knowledge/ctx-payment"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/ctx-observability",
+      "@type": [
+        "openpix:ArchitectureContext",
+        "skos:Concept"
+      ],
+      "title": "Observability Context",
+      "status": "active",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-observability",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "context",
+        "health",
+        "metrics",
+        "observability",
+        "traces"
+      ],
+      "content": "# Observability\n\nContexto responsável por padrões de logs, métricas, traces e interfaces\noperacionais. Ele observa os demais contextos sem absorver suas regras de\nnegócio ou dados sensíveis.\n\n## Knowledge graph\n\n- [[RFC-OBSERVABILITY-001-operational-observability-interface]]\n- [[ADR-OBSERVABILITY-001-pull-based-operational-endpoints]]\n- [[CTX-SDUI]]\n- [[CTX-DECODING]]\n- [[CTX-PAYMENT]]",
+      "sourcePath": "docs/architecture/contexts/CTX-OBSERVABILITY.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "dependsOn": [
+        "https://openpix.dev/knowledge/ctx-platform"
+      ],
+      "observes": [
+        "https://openpix.dev/knowledge/ctx-decoding",
+        "https://openpix.dev/knowledge/ctx-payment",
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/ctx-payment",
+      "@type": [
+        "openpix:ArchitectureContext",
+        "skos:Concept"
+      ],
+      "title": "Payment Lifecycle Context",
+      "status": "active",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-payment",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "context",
+        "idempotency",
+        "payment",
+        "state-machine"
+      ],
+      "content": "# Payment Lifecycle\n\nContexto responsável pelo aggregate Payment, validação de valor e moeda,\ntransições, idempotência, persistência e resultados. Não conhece componentes\nSDUI nem decide como um payload é lido.\n\n## Knowledge graph\n\n- [[RFC-PAYMENT-001-payment-lifecycle-and-idempotency]]\n- [[ADR-PAYMENT-001-aggregate-state-machine]]\n- [[CTX-DECODING]]\n- [[CTX-SDUI]]\n- [[CTX-OBSERVABILITY]]",
+      "sourcePath": "docs/architecture/contexts/CTX-PAYMENT.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "dependsOn": [
+        "https://openpix.dev/knowledge/ctx-platform"
+      ],
+      "observedBy": [
+        "https://openpix.dev/knowledge/ctx-observability"
+      ],
+      "relatedTo": [
+        "https://openpix.dev/knowledge/ctx-decoding",
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/ctx-platform",
+      "@type": [
+        "openpix:ArchitectureContext",
+        "skos:Concept"
+      ],
+      "title": "Platform and Contract Governance Context",
+      "status": "active",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-platform",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "context",
+        "contracts",
+        "governance",
+        "platform"
+      ],
+      "content": "# Platform and Contract Governance\n\nContexto responsável por limites de serviço, convenções HTTP, correlação,\ntracing, versionamento e qualidade dos contratos. Não possui regras de SDUI,\ndecodificação ou pagamentos.\n\n## Knowledge graph\n\n- [[RFC-PLATFORM-001-contract-first-service-boundaries]]\n- [[ADR-PLATFORM-001-service-local-openapi-contracts]]\n- [[CTX-SDUI]]\n- [[CTX-DECODING]]\n- [[CTX-PAYMENT]]\n- [[CTX-OBSERVABILITY]]",
+      "sourcePath": "docs/architecture/contexts/CTX-PLATFORM.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "governs": [
+        "https://openpix.dev/knowledge/ctx-decoding",
+        "https://openpix.dev/knowledge/ctx-observability",
+        "https://openpix.dev/knowledge/ctx-payment",
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/ctx-sdui",
+      "@type": [
+        "openpix:ArchitectureContext",
+        "skos:Concept"
+      ],
+      "title": "Server-Driven UI Context",
+      "status": "active",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-sdui",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "compatibility",
+        "context",
+        "mobile-configuration",
+        "sdui"
+      ],
+      "content": "# Server-Driven UI\n\nContexto responsável por configuração móvel, disponibilidade avaliada de\nfeatures, composição de telas, compatibilidade do renderer e publicação futura.\nNão executa pagamentos nem interpreta payload Pix.\n\n## Knowledge graph\n\n- [[RFC-SDUI-001-mobile-context-and-component-compatibility]]\n- [[ADR-SDUI-001-typed-request-context-dependencies]]\n- [[ADR-SDUI-002-static-json-runtime-source]]\n- [[CTX-PLATFORM]]\n- [[CTX-PAYMENT]]\n- [[CTX-OBSERVABILITY]]",
+      "sourcePath": "docs/architecture/contexts/CTX-SDUI.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "dependsOn": [
+        "https://openpix.dev/knowledge/ctx-platform"
+      ],
+      "observedBy": [
+        "https://openpix.dev/knowledge/ctx-observability"
+      ],
+      "relatedTo": [
+        "https://openpix.dev/knowledge/ctx-payment"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/graph-schema",
+      "@type": [
+        "openpix:MetadataSchema"
+      ],
+      "title": "Architecture Knowledge Graph Metadata Schema",
+      "status": "active",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-platform",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "architecture",
+        "knowledge-graph",
+        "metadata"
+      ],
+      "content": "# Metadados do knowledge graph\n\nTodos os RFCs, ADRs e nós de contexto usam YAML frontmatter. O frontmatter é a\nfonte estruturada; wikilinks no corpo existem para navegação humana.\n\n## Campos obrigatórios\n\n| Campo | Regra |\n|---|---|\n| `id` | Identificador global, estável e em kebab-case. |\n| `type` | `context`, `rfc`, `adr`, `article`, `index` ou `schema`. |\n| `ontology` | Versão do mapeamento, atualmente `openpix-architecture-v1`. |\n| `title` | Nome legível da entidade. |\n| `status` | Estado compatível com o tipo do documento. |\n| `context` | Bounded context principal. |\n| `created` | Data ISO `YYYY-MM-DD`. |\n| `updated` | Última mudança semântica. |\n| `tags` | Termos controlados e úteis para recuperação. |\n| `relations` | Arestas tipadas para outros IDs globais. |\n\n## Estados\n\n- RFC: `draft`, `proposed`, `accepted`, `rejected`, `withdrawn`.\n- ADR: `proposed`, `accepted`, `deprecated`, `superseded`.\n- Contexto, índice e schema: `active` ou `deprecated`.\n- Artigo: `draft`, `review`, `published`.\n\n## Tipos de relação\n\nUse verbos estáveis:\n\n- `belongs_to`: documento pertence a um contexto;\n- `contains`: índice agrega um conjunto de nós;\n- `defines`: origem define um schema ou convenção;\n- `proposes`: RFC propõe uma decisão ou capacidade;\n- `decided_by`: proposta foi resolvida por um ADR;\n- `resolves`: ADR resolve uma RFC;\n- `implements`: artefato implementa uma decisão;\n- `explains`: artigo ou guia explica uma decisão;\n- `depends_on`: origem depende semanticamente do destino;\n- `produces_for`: origem produz contrato consumível pelo destino;\n- `observes`: origem coleta sinais sobre o destino;\n- `observed_by`: contexto é observado por outro;\n- `governs`: origem estabelece regras para o destino;\n- `supersedes`: origem substitui uma decisão anterior;\n- `related_to`: relação relevante sem dependência.\n\nCada `target` deve apontar para um `id` existente:\n\n```yaml\nrelations:\n  - type: belongs_to\n    target: ctx-sdui\n  - type: decided_by\n    target: adr-sdui-001\n```\n\n## Regras para busca semântica\n\n1. Um documento trata uma decisão principal.\n2. Títulos e resumos descrevem o problema, não apenas a tecnologia.\n3. Acrônimos são expandidos na primeira ocorrência.\n4. Alternativas rejeitadas permanecem registradas.\n5. IDs não mudam quando arquivos são movidos.\n6. Relações importantes aparecem no frontmatter e em `## Knowledge graph`.\n7. Dados secretos, payloads Pix e identificadores pessoais não entram nas notas.\n\n## Convenção de nomes\n\n```text\nCTX-<CONTEXTO>.md\nRFC-<CONTEXTO>-<NNN>-<slug>.md\nADR-<CONTEXTO>-<NNN>-<slug>.md\n```\n\nO basename é único em todo o vault para que wikilinks do Obsidian funcionem\nsem depender do caminho físico.\n\n## Projeção interoperável\n\nOs IDs locais são expandidos sob `https://openpix.dev/knowledge/`. Tipos e\nrelações são mapeados pelo [[ONTOLOGY]] para Dublin Core, Schema.org, SKOS e o\nvocabulário OpenPix. O JSON-LD é derivado e nunca deve ser editado manualmente:\n\n```bash\npython3 scripts/build_knowledge_graph.py\npython3 scripts/build_knowledge_graph.py --check\n```\n\n## Knowledge graph\n\n- Governado por [[README|Architecture Knowledge Graph]].\n- Ontologia: [[ONTOLOGY]].\n- Aplicado por [[RFC-PLATFORM-001-contract-first-service-boundaries]].",
+      "sourcePath": "docs/architecture/GRAPH-SCHEMA.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "governs": [
+        "https://openpix.dev/knowledge/architecture-index"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/rfc-decoding-001",
+      "@type": [
+        "openpix:RequestForComments"
+      ],
+      "title": "Pix Payload Decoding Service Boundary",
+      "status": "proposed",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-decoding",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "boundary",
+        "br-code",
+        "decoding",
+        "pix",
+        "rfc"
+      ],
+      "content": "# RFC-DECODING-001: Pix payload decoding boundary\n\n## Summary\n\nDecoding valida estrutura e checksum de um payload Pix/BR Code e devolve uma\ninstrução normalizada. Não cria, confirma, cancela ou persiste pagamentos.\n\n## Motivation\n\nQR Code, NFC e outras entradas podem transportar a mesma informação Pix. Se\ncada canal interpretar o payload e iniciar pagamento ao mesmo tempo, parsing,\norquestração e estado ficam acoplados.\n\n## Proposal\n\n`POST /decoding/v1/pix/payloads` recebe o payload bruto e retorna formato,\niniciação estática/dinâmica, moeda, valor opcional, recebedor e txid. A saída é\num value object de integração, não um Payment.\n\nO serviço:\n\n- valida limites antes de fazer parsing;\n- nunca registra payload, chave Pix ou dados pessoais;\n- não busca URL dinâmica nesta primeira versão;\n- retorna `422` para payload reconhecido porém inválido;\n- propaga correlação e Trace Context;\n- responde com `Cache-Control: no-store`.\n\n## Alternatives\n\n- Decodificar no mobile: reduz uma chamada, mas duplica regras por plataforma.\n- Decodificar no Payment Service: simplifica topologia, mas mistura entrada com\n  lifecycle e reduz reutilização.\n\n## Open questions\n\n- Resolução segura de payload dinâmico.\n- Versionamento da instrução normalizada.\n- Limites específicos por formato e proteção contra parser abuse.\n\n## Knowledge graph\n\n- Contexto: [[CTX-DECODING]]\n- Decisão proposta: [[ADR-DECODING-001-stateless-payload-decoding]]\n- Consumidor semântico: [[CTX-PAYMENT]]\n- Governança: [[RFC-PLATFORM-001-contract-first-service-boundaries]]",
+      "sourcePath": "decoding-service/articles/rfcs/RFC-DECODING-001-pix-payload-decoding-boundary.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-decoding"
+      ],
+      "decidedBy": [
+        "https://openpix.dev/knowledge/adr-decoding-001"
+      ],
+      "dependsOn": [
+        "https://openpix.dev/knowledge/rfc-platform-001"
+      ],
+      "producesFor": [
+        "https://openpix.dev/knowledge/ctx-payment"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/rfc-observability-001",
+      "@type": [
+        "openpix:RequestForComments"
+      ],
+      "title": "Operational Observability Interface",
+      "status": "proposed",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-observability",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "health",
+        "metrics",
+        "observability",
+        "readiness",
+        "rfc"
+      ],
+      "content": "# RFC-OBSERVABILITY-001: Operational observability interface\n\n## Summary\n\nO contexto de observability expõe liveness, readiness e métricas de plataforma\nsem absorver APIs de negócio ou dados sensíveis.\n\n## Proposal\n\n- `GET /health`: verifica apenas se o processo está vivo;\n- `GET /ready`: verifica dependências necessárias para aceitar trabalho;\n- `GET /metrics`: exposição Prometheus protegida pela rede e/ou credencial de\n  serviço;\n- logs estruturados incluem correlation ID e trace ID;\n- W3C Trace Context é propagado entre Python e Java;\n- métricas evitam labels de alta cardinalidade.\n\nCada serviço continua responsável por instrumentar seus próprios comportamentos.\nO observability-service oferece infraestrutura e visão operacional, não um\nmodelo de domínio central.\n\n## Alternatives\n\n- Endpoint único de health: simples, mas confunde reinício com retirada de\n  tráfego.\n- Push de todas as métricas: útil em alguns ambientes, porém adiciona falha de\n  entrega e buffering antes de existir requisito.\n- Logs como única fonte: insuficientes para alertas quantitativos e traces.\n\n## Data policy\n\nTokens, payloads QR, chaves Pix, contas, documentos e IDs de idempotência não\npodem ser atributos de telemetria. IDs de correlação também não devem virar\nlabels de métricas.\n\n## Knowledge graph\n\n- Contexto: [[CTX-OBSERVABILITY]]\n- Decisão: [[ADR-OBSERVABILITY-001-pull-based-operational-endpoints]]\n- Observados: [[CTX-SDUI]], [[CTX-DECODING]] e [[CTX-PAYMENT]]",
+      "sourcePath": "observability-service/articles/rfcs/RFC-OBSERVABILITY-001-operational-observability-interface.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-observability"
+      ],
+      "decidedBy": [
+        "https://openpix.dev/knowledge/adr-observability-001"
+      ],
+      "dependsOn": [
+        "https://openpix.dev/knowledge/rfc-platform-001"
+      ],
+      "observes": [
+        "https://openpix.dev/knowledge/ctx-decoding",
+        "https://openpix.dev/knowledge/ctx-payment",
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/rfc-payment-001",
+      "@type": [
+        "openpix:RequestForComments"
+      ],
+      "title": "Payment Lifecycle and Idempotent Commands",
+      "status": "proposed",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-payment",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "aggregate",
+        "idempotency",
+        "payment",
+        "rfc",
+        "state-machine"
+      ],
+      "content": "# RFC-PAYMENT-001: Payment lifecycle and idempotency\n\n## Summary\n\nPayment é um aggregate com transições explícitas. Criação e confirmação são\ncomandos idempotentes, persistidos com fingerprint da requisição e escopo do\ncaller.\n\n## Proposal\n\nAPI inicial:\n\n- `POST /payments`;\n- `GET /payments/{paymentId}`;\n- `POST /payments/{paymentId}/confirm`;\n- `POST /payments/{paymentId}/cancel`.\n\nEstados:\n\n```text\nCREATED → AWAITING_CONFIRMATION → AUTHENTICATING → PROCESSING → COMPLETED\n                                                            ↘ FAILED\nAWAITING_CONFIRMATION → CANCELLED\nAWAITING_CONFIRMATION → EXPIRED\n```\n\n`Idempotency-Key` é obrigatório na criação e confirmação. Uma repetição com o\nmesmo fingerprint devolve o resultado anterior; a mesma chave com outro corpo\nresulta em `409`.\n\n## Boundaries\n\nPayment aceita uma destination normalizada, mas não conhece o componente SDUI\nque iniciou a jornada nem o parser que interpretou o payload. Seu banco,\nregistros de idempotência e eventos pertencem exclusivamente ao serviço.\n\n## Alternatives\n\n- Estado controlado no controller: rápido no início, difícil de testar e sujeito\n  a transições inválidas.\n- Lock apenas em memória: não protege múltiplas instâncias nem restart.\n- Event sourcing desde o início: oferece histórico forte, mas adiciona custo sem\n  requisito concreto nesta fase.\n\n## Security\n\nAutenticação, ownership, antifraude e integração com participantes reais não\nestão implementados. Respostas financeiras usam `no-store`; dados sensíveis e\ntokens não entram em logs.\n\n## Knowledge graph\n\n- Contexto: [[CTX-PAYMENT]]\n- Decisão: [[ADR-PAYMENT-001-aggregate-state-machine]]\n- Entrada normalizada: [[CTX-DECODING]]\n- Observado por: [[CTX-OBSERVABILITY]]",
+      "sourcePath": "payment-service/articles/rfcs/RFC-PAYMENT-001-payment-lifecycle-and-idempotency.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-payment"
+      ],
+      "decidedBy": [
+        "https://openpix.dev/knowledge/adr-payment-001"
+      ],
+      "dependsOn": [
+        "https://openpix.dev/knowledge/rfc-platform-001"
+      ],
+      "observedBy": [
+        "https://openpix.dev/knowledge/ctx-observability"
+      ],
+      "relatedTo": [
+        "https://openpix.dev/knowledge/ctx-decoding"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/rfc-platform-001",
+      "@type": [
+        "openpix:RequestForComments"
+      ],
+      "title": "Contract-First Boundaries for OpenPix JSR Backend Services",
+      "status": "accepted",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-platform",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "bounded-context",
+        "contract-first",
+        "openapi",
+        "platform",
+        "rfc"
+      ],
+      "content": "# RFC-PLATFORM-001: Contract-first service boundaries\n\n## Summary\n\nCada serviço publica seu próprio contrato OpenAPI e expõe somente conceitos do\nbounded context que possui. Integrações acontecem por contratos versionados,\nnunca por classes, tabelas ou modelos internos compartilhados.\n\n## Motivation\n\nUm repositório único facilita o início do projeto, mas também facilita\nacoplamentos silenciosos. Sem limites explícitos, SDUI pode começar a carregar\nestado de pagamento, decoding pode criar transações e observability pode virar\num depósito de dados de negócio.\n\n## Proposal\n\n- `sdui-service` possui configuração e telas.\n- `decoding-service` possui interpretação de payloads.\n- `payment-service` possui o ciclo de vida de Payment.\n- `observability-service` possui interfaces operacionais.\n- cada serviço mantém `<service>/contracts/openapi.yaml`;\n- erros HTTP seguem Problem Details com `code` e `correlationId`;\n- correlação e W3C Trace Context atravessam fronteiras;\n- API version, contract version e content revision permanecem conceitos\n  distintos;\n- mudanças incompatíveis criam uma nova versão pública.\n\n## Alternatives\n\n### Um contrato central monolítico\n\nFacilita descoberta inicial, mas confunde ownership e faz uma alteração local\nparecer uma release coordenada de toda a plataforma.\n\n### Compartilhar modelos entre serviços\n\nReduz duplicação aparente, porém transfere o acoplamento para build e runtime,\nalém de não funcionar de forma saudável entre Python e Java.\n\n## Compatibility\n\nMudanças aditivas são preferidas. Enum e discriminator exigem atenção especial,\npois um cliente antigo pode não reconhecer um novo valor. Todo consumidor deve\ntratar extensões desconhecidas de forma segura.\n\n## Security\n\nContratos não tornam dados confiáveis. Headers enviados pelo cliente são\ncontexto não confiável; autenticação e autorização devem vir de identidade\nvalidada. Tokens, payloads Pix, chaves e dados pessoais não podem aparecer em\nlogs ou exemplos reais.\n\n## Rollout\n\n1. Publicar contratos locais.\n2. Validar YAML e referências em CI.\n3. Validar exemplos contra schemas.\n4. Adicionar contract tests por consumidor.\n5. Publicar artefatos versionados quando houver múltiplos repositórios.\n\n## Knowledge graph\n\n- Contexto: [[CTX-PLATFORM]]\n- Decisão: [[ADR-PLATFORM-001-service-local-openapi-contracts]]\n- Governados: [[RFC-SDUI-001-mobile-context-and-component-compatibility]],\n  [[RFC-DECODING-001-pix-payload-decoding-boundary]],\n  [[RFC-PAYMENT-001-payment-lifecycle-and-idempotency]] e\n  [[RFC-OBSERVABILITY-001-operational-observability-interface]].",
+      "sourcePath": "docs/architecture/rfcs/RFC-PLATFORM-001-contract-first-service-boundaries.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-platform"
+      ],
+      "decidedBy": [
+        "https://openpix.dev/knowledge/adr-platform-001"
+      ],
+      "governs": [
+        "https://openpix.dev/knowledge/rfc-decoding-001",
+        "https://openpix.dev/knowledge/rfc-observability-001",
+        "https://openpix.dev/knowledge/rfc-payment-001",
+        "https://openpix.dev/knowledge/rfc-sdui-001"
+      ]
+    },
+    {
+      "@id": "https://openpix.dev/knowledge/rfc-sdui-001",
+      "@type": [
+        "openpix:RequestForComments"
+      ],
+      "title": "Mobile Context and Layered SDUI Compatibility",
+      "status": "accepted",
+      "boundedContext": "https://openpix.dev/knowledge/ctx-sdui",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "tags": [
+        "compatibility",
+        "mobile-context",
+        "renderer",
+        "rfc",
+        "sdui"
+      ],
+      "content": "# RFC-SDUI-001: Mobile context and layered compatibility\n\n## Summary\n\nO cliente declara contexto e capacidade de interpretação por headers. O\nservidor usa essas informações para evitar conteúdo sabidamente incompatível,\nmas cada componente também retorna `compatibilityVersion`; o renderer mantém a\nresponsabilidade final de falhar com segurança.\n\n## Problem\n\nApp build, país, locale, capability de produto e versão do renderer evoluem em\nritmos diferentes. Usar somente `X-App-Version` acopla o schema SDUI à release\ndo aplicativo. Usar somente uma lista de componentes também não cobre mudanças\nno documento como um todo.\n\n## Proposal\n\nO request móvel inclui:\n\n- `X-App-Platform`, `X-App-Version`, `X-App-Build` e `X-App-Package`;\n- país, idioma, timezone e moeda como dimensões independentes;\n- `X-App-Capabilities` para features de produto;\n- `X-SDUI-Contract-Version` para o envelope;\n- `X-SDUI-Component-Versions` como mapa compacto `type=version`;\n- correlação, trace context e validators de cache.\n\nCada componente retorna:\n\n```json\n{\n  \"type\": \"text\",\n  \"compatibilityVersion\": [\"1\"]\n}\n```\n\nO servidor responde `406` quando detecta incompatibilidade. Ainda assim, o\ncliente deve reconhecer `(type, version)`, aplicar fallback ou rejeitar a tela\nquando não puder renderizá-la com segurança.\n\n## Why both layers\n\nO header reduz respostas inúteis e permite seleção server-side. O campo no\ncomponente torna a representação autodescritiva e protege contra configuração\nincorreta, cache antigo ou evolução parcial. Nenhuma das camadas, isoladamente,\né uma garantia absoluta.\n\n## Alternatives\n\n### Apenas app build\n\nÉ compacto, mas obriga o servidor a conhecer toda a matriz entre build e\nrenderer.\n\n### Apenas versão por componente na resposta\n\nMantém o documento autodescritivo, mas o servidor descobre a incompatibilidade\nsomente depois de enviar uma tela possivelmente inutilizável.\n\n### Manifest completo do renderer no body\n\nEscala para catálogos extensos, porém adiciona uma chamada ou payload de\nnegociação que ainda não é necessário.\n\n## Limits\n\nO mapa em header deve ter limites de itens e bytes. Se o catálogo crescer a\nponto de pressionar limites de infraestrutura, uma versão agregada do renderer\nou um manifest versionado deve substituir a enumeração, via nova RFC.\n\n## Acceptance criteria\n\n- headers são parseados uma vez;\n- versões incompatíveis resultam em Problem Details `406`;\n- `compatibilityVersion` é obrigatório e não vazio;\n- cliente continua tratando componente desconhecido;\n- cache varia pelas dimensões que alteram a representação.\n\n## Knowledge graph\n\n- Contexto: [[CTX-SDUI]]\n- Implementação de contexto: [[ADR-SDUI-001-typed-request-context-dependencies]]\n- Fonte atual: [[ADR-SDUI-002-static-json-runtime-source]]\n- Governança: [[RFC-PLATFORM-001-contract-first-service-boundaries]]",
+      "sourcePath": "sdui-service/articles/rfcs/RFC-SDUI-001-mobile-context-and-component-compatibility.md",
+      "ontologyVersion": "openpix-architecture-v1",
+      "belongsTo": [
+        "https://openpix.dev/knowledge/ctx-sdui"
+      ],
+      "decidedBy": [
+        "https://openpix.dev/knowledge/adr-sdui-001"
+      ],
+      "dependsOn": [
+        "https://openpix.dev/knowledge/rfc-platform-001"
+      ],
+      "relatedTo": [
+        "https://openpix.dev/knowledge/adr-sdui-002"
+      ]
+    }
+  ]
+}

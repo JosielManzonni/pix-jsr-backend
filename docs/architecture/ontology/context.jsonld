@@ -1,0 +1,108 @@
+{
+  "@context": {
+    "openpix": "https://openpix.dev/ontology/",
+    "dcterms": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "schema": "https://schema.org/",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+
+    "title": "dcterms:title",
+    "status": "openpix:status",
+    "boundedContext": {
+      "@id": "openpix:boundedContext",
+      "@type": "@id"
+    },
+    "created": {
+      "@id": "dcterms:created",
+      "@type": "xsd:date"
+    },
+    "updated": {
+      "@id": "dcterms:modified",
+      "@type": "xsd:date"
+    },
+    "tags": {
+      "@id": "dcterms:subject",
+      "@container": "@set"
+    },
+    "content": "schema:text",
+    "sourcePath": "schema:url",
+    "ontologyVersion": "openpix:ontologyVersion",
+
+    "belongsTo": {
+      "@id": "dcterms:isPartOf",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "contains": {
+      "@id": "dcterms:hasPart",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "defines": {
+      "@id": "openpix:defines",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "proposes": {
+      "@id": "openpix:proposes",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "decidedBy": {
+      "@id": "openpix:decidedBy",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "resolves": {
+      "@id": "openpix:resolves",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "implements": {
+      "@id": "openpix:implements",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "explains": {
+      "@id": "openpix:explains",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "dependsOn": {
+      "@id": "openpix:dependsOn",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "producesFor": {
+      "@id": "openpix:producesFor",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "observes": {
+      "@id": "openpix:observes",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "observedBy": {
+      "@id": "openpix:observedBy",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "governs": {
+      "@id": "openpix:governs",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "supersedes": {
+      "@id": "dcterms:replaces",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "relatedTo": {
+      "@id": "dcterms:relation",
+      "@type": "@id",
+      "@container": "@set"
+    }
+  }
+}

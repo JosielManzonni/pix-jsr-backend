@@ -1,0 +1,32 @@
+flowchart LR
+    subgraph Backend["Backend SDUI"]
+        Editor["Editor / Admin"]
+        Publisher["Validation & Publishing"]
+        Repository[("Content & Revisions")]
+        Composer["Targeting & Composition"]
+        API["SDUI API / BFF"]
+
+        Editor --> Publisher
+        Publisher --> Repository
+        Repository --> Composer
+        Composer --> API
+    end
+
+    Contract["Versioned declarative contract"]
+
+    subgraph Client["Native Client"]
+        Transport["Networking & Cache"]
+        Engine["SDUI Engine"]
+        Catalog["Native Component Catalog"]
+        App["Rendered Experience"]
+
+        Transport --> Engine
+        Catalog --> Engine
+        Engine --> App
+    end
+
+    API --> Contract
+    Contract --> Transport
+
+    BackendPolicy["Business policy & authorization"] -. remains server-side .-> Backend
+    NativeCode["Native code shipped with the app"] -. owns behavior .-> Catalog

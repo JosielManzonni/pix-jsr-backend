@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant Client as Mobile Renderer
+    participant API as SDUI Service
+    participant Source as Static JSON
+
+    Client->>API: GET /mobile/v1/screens/pix_home
+    Note over Client,API: App context + contract version + component versions
+    API->>API: Normalize typed request context
+    API->>Source: Read screens.json
+    Source-->>API: Published screen document
+    API->>API: Validate Pydantic contract
+    API->>API: Compare contract and component compatibility
+
+    alt compatible
+        API-->>Client: 200 Screen + compatibilityVersion + ETag
+        Client->>Client: Validate renderer support again
+        Client->>Client: Render native components
+    else known incompatibility
+        API-->>Client: 406 Problem Details
+        Client->>Client: Apply safe fallback
+    else matching ETag
+        API-->>Client: 304 Not Modified
+    end

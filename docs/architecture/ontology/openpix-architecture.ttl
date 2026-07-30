@@ -1,0 +1,62 @@
+@prefix openpix: <https://openpix.dev/ontology/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+openpix:ArchitectureOntology
+    a owl:Ontology ;
+    dcterms:title "OpenPix JSR Architecture Ontology"@en ;
+    dcterms:created "2026-07-29"^^xsd:date ;
+    owl:versionInfo "1.0.0" .
+
+openpix:RequestForComments
+    a owl:Class ;
+    rdfs:label "Request for Comments"@en .
+
+openpix:ArchitectureDecision
+    a owl:Class ;
+    rdfs:label "Architecture Decision Record"@en .
+
+openpix:ArchitectureContext
+    a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label "Architecture bounded context"@en .
+
+openpix:ArchitectureIndex
+    a owl:Class ;
+    rdfs:label "Architecture index"@en .
+
+openpix:MetadataSchema
+    a owl:Class ;
+    rdfs:label "Metadata schema"@en .
+
+openpix:status
+    a owl:DatatypeProperty ;
+    rdfs:range xsd:string .
+
+openpix:ontologyVersion
+    a owl:DatatypeProperty ;
+    rdfs:range xsd:string .
+
+openpix:boundedContext
+    a owl:ObjectProperty ;
+    rdfs:range openpix:ArchitectureContext .
+
+openpix:defines a owl:ObjectProperty .
+openpix:proposes a owl:ObjectProperty .
+openpix:decidedBy a owl:ObjectProperty .
+openpix:resolves a owl:ObjectProperty .
+openpix:implements a owl:ObjectProperty .
+openpix:explains a owl:ObjectProperty .
+openpix:dependsOn a owl:ObjectProperty .
+openpix:producesFor a owl:ObjectProperty .
+openpix:observes a owl:ObjectProperty .
+openpix:observedBy a owl:ObjectProperty .
+openpix:governs a owl:ObjectProperty .
+
+openpix:decidedBy owl:inverseOf openpix:resolves .
+openpix:observes owl:inverseOf openpix:observedBy .

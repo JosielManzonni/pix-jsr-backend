@@ -1,0 +1,16 @@
+flowchart LR
+    Response["SDUI response"] --> Cache["Repository & Local Cache"]
+    Cache --> Parser["Parser & Schema Validator"]
+    Parser --> Compatibility["Compatibility Manager"]
+    Compatibility --> Registry["Component Registry / Factory"]
+    Registry --> Renderers["Native Renderers & Design System"]
+    Renderers --> Tree["Native UI Tree"]
+
+    Compatibility -->|unsupported| Fallback["Fallback / Error Boundary"]
+    Tree --> Actions["Action Dispatcher & Navigation"]
+    Actions -->|allowlisted action| NativeFeature["Native Feature / API"]
+
+    Parser -. event .-> Telemetry["Analytics, Logs & Metrics"]
+    Compatibility -. event .-> Telemetry
+    Fallback -. event .-> Telemetry
+    Actions -. event .-> Telemetry

@@ -1,0 +1,757 @@
+openapi: 3.0.3
+
+info:
+  title: OpenPix JSR Mobile SDUI API
+  version: 1.1.0
+  description: |
+    Mobile read contract for evaluated feature configuration and native SDUI
+    screen composition. It includes the version, regional, capability,
+    correlation, and caching context defined by the backend handoff.
+
+    This service owns presentation metadata and contract compatibility only. It
+    does not process payments, authorize business operations, or expose
+    internal rollout rules and unpublished revisions.
+  license:
+    name: GNU General Public License v3.0
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  - url: /
+    description: Host selected by the deployment environment.
+
+tags:
+  - name: Mobile configuration
+    description: Evaluated feature availability for the current mobile context.
+  - name: Mobile screens
+    description: Versioned native screen documents composed by the backend.
+
+paths:
+  /mobile/v1/configuration:
+    get:
+      tags: [Mobile configuration]
+      summary: Get evaluated mobile configuration
+      description: |
+        Returns only the feature result evaluated for this request. Internal
+        segmentation, percentage rollout, and kill-switch rules are never
+        exposed.
+      operationId: getMobileConfiguration
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AppPlatform'
+        - $ref: '#/components/parameters/AppVersion'
+        - $ref: '#/components/parameters/AppBuild'
+        - $ref: '#/components/parameters/AppPackage'
+        - $ref: '#/components/parameters/AppDistribution'
+        - $ref: '#/components/parameters/CountryCode'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/TimeZone'
+        - $ref: '#/components/parameters/CurrencyCode'
+        - $ref: '#/components/parameters/AppCapabilities'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/Traceparent'
+        - $ref: '#/components/parameters/Tracestate'
+        - $ref: '#/components/parameters/IfNoneMatch'
+        - $ref: '#/components/parameters/IfModifiedSince'
+      responses:
+        '200':
+          description: Configuration evaluated successfully.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+            X-Contract-Version:
+              $ref: '#/components/headers/ContractVersion'
+            X-Configuration-Revision:
+              $ref: '#/components/headers/ConfigurationRevision'
+            Content-Language:
+              $ref: '#/components/headers/ContentLanguage'
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Last-Modified:
+              $ref: '#/components/headers/LastModified'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCache'
+            Vary:
+              $ref: '#/components/headers/RepresentationVary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppConfiguration'
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ConfigurationNotFound'
+        '406':
+          $ref: '#/components/responses/UnsupportedContext'
+        '426':
+          $ref: '#/components/responses/UpgradeRequired'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /mobile/v1/screens/{screenId}:
+    get:
+      tags: [Mobile screens]
+      summary: Get an evaluated SDUI screen
+      description: |
+        Returns one screen compatible with the declared SDUI contract,
+        supported component versions, and runtime capabilities.
+      operationId: getMobileScreen
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ScreenId'
+        - $ref: '#/components/parameters/AppPlatform'
+        - $ref: '#/components/parameters/AppVersion'
+        - $ref: '#/components/parameters/AppBuild'
+        - $ref: '#/components/parameters/AppPackage'
+        - $ref: '#/components/parameters/AppDistribution'
+        - $ref: '#/components/parameters/CountryCode'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/TimeZone'
+        - $ref: '#/components/parameters/CurrencyCode'
+        - $ref: '#/components/parameters/AppCapabilities'
+        - $ref: '#/components/parameters/SduiContractVersion'
+        - $ref: '#/components/parameters/SduiComponentVersions'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/Traceparent'
+        - $ref: '#/components/parameters/Tracestate'
+        - $ref: '#/components/parameters/IfNoneMatch'
+        - $ref: '#/components/parameters/IfModifiedSince'
+      responses:
+        '200':
+          description: Screen evaluated successfully.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+            X-Contract-Version:
+              $ref: '#/components/headers/ContractVersion'
+            X-Screen-Revision:
+              $ref: '#/components/headers/ScreenRevision'
+            Content-Language:
+              $ref: '#/components/headers/ContentLanguage'
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Last-Modified:
+              $ref: '#/components/headers/LastModified'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateCache'
+            Vary:
+              $ref: '#/components/headers/RepresentationVary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Screen'
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ScreenNotFound'
+        '406':
+          $ref: '#/components/responses/UnsupportedContext'
+        '426':
+          $ref: '#/components/responses/UpgradeRequired'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    ScreenId:
+      name: screenId
+      in: path
+      required: true
+      description: Stable public screen identifier, never a database revision ID.
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    AppPlatform:
+      name: X-App-Platform
+      in: header
+      required: true
+      description: Platform allowlist used for compatibility evaluation, not authorization.
+      schema:
+        type: string
+        enum: [android]
+    AppVersion:
+      name: X-App-Version
+      in: header
+      required: true
+      description: Human-readable version used for diagnostics and update messages.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 32
+        pattern: '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$'
+        example: 1.4.2
+    AppBuild:
+      name: X-App-Build
+      in: header
+      required: true
+      description: Positive, sortable build number used for minimum-version checks.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 2147483647
+        example: 10402
+    AppPackage:
+      name: X-App-Package
+      in: header
+      required: true
+      description: Application identifier checked against the server allowlist.
+      schema:
+        type: string
+        minLength: 3
+        maxLength: 255
+        pattern: '^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$'
+        example: com.openpix.jsr
+    AppDistribution:
+      name: X-App-Distribution
+      in: header
+      required: false
+      description: Bundle or release channel hint; it is not proof of capability or authorization.
+      schema:
+        type: string
+        enum: [full, qr, nfc, payment, internal, beta, production]
+    CountryCode:
+      name: X-Country-Code
+      in: header
+      required: true
+      description: ISO 3166-1 alpha-2 country; the initial Pix allowlist contains BR only.
+      schema:
+        type: string
+        enum: [BR]
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      required: true
+      description: Standard language preference used for locale negotiation.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 128
+        example: pt-BR
+    TimeZone:
+      name: X-Time-Zone
+      in: header
+      required: false
+      description: IANA time-zone identifier; it is independent from country and locale.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: '^[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+$'
+        example: America/Manaus
+    CurrencyCode:
+      name: X-Currency-Code
+      in: header
+      required: false
+      description: ISO 4217 currency; initial Pix content supports BRL only.
+      schema:
+        type: string
+        enum: [BRL]
+    AppCapabilities:
+      name: X-App-Capabilities
+      in: header
+      required: false
+      description: |
+        Comma-separated stable product capabilities. They filter unsupported
+        content but are never trusted for authorization.
+      schema:
+        type: string
+        maxLength: 512
+        pattern: '^[A-Z][A-Z0-9_]*(?:,[A-Z][A-Z0-9_]*){0,31}$'
+        example: PIX_QR,PIX_NFC,PAYMENT
+    SduiContractVersion:
+      name: X-SDUI-Contract-Version
+      in: header
+      required: true
+      description: Highest SDUI contract version safely interpreted by the client.
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+    SduiComponentVersions:
+      name: X-SDUI-Component-Versions
+      in: header
+      required: true
+      description: Comma-separated component-to-version map used to avoid unsupported components.
+      schema:
+        type: string
+        maxLength: 512
+        pattern: '^[a-z][a-z0-9_]*=\d+(?:,[a-z][a-z0-9_]*=\d+){0,31}$'
+        example: text=1,spacer=1,feature=1
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: |
+        End-to-end identifier. A valid client value is propagated; otherwise
+        the server generates and returns a new one.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Identifier for this HTTP request, distinct from correlation.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    Traceparent:
+      name: traceparent
+      in: header
+      required: false
+      description: W3C Trace Context propagated across Python and Java services.
+      schema:
+        type: string
+        pattern: '^[\da-f]{2}-[\da-f]{32}-[\da-f]{16}-[\da-f]{2}$'
+    Tracestate:
+      name: tracestate
+      in: header
+      required: false
+      description: Optional W3C vendor-specific trace state.
+      schema:
+        type: string
+        maxLength: 512
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      description: Entity tag from a previous representation.
+      schema:
+        type: string
+        maxLength: 128
+        example: '"configuration-v42"'
+    IfModifiedSince:
+      name: If-Modified-Since
+      in: header
+      required: false
+      description: HTTP date used when no stronger entity-tag validator is available.
+      schema:
+        type: string
+        format: http-date
+        example: Wed, 29 Jul 2026 12:00:00 GMT
+
+  headers:
+    CorrelationId:
+      description: Effective correlation identifier used by the service.
+      required: true
+      schema:
+        type: string
+    ContractVersion:
+      description: Schema contract version of the returned document, not its content revision.
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ConfigurationRevision:
+      description: Immutable published configuration revision selected for this request.
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ScreenRevision:
+      description: Immutable published screen revision selected for this request.
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ContentLanguage:
+      description: Actual locale selected after Accept-Language negotiation.
+      required: true
+      schema:
+        type: string
+        example: pt-BR
+    ETag:
+      description: Validator for this evaluated representation.
+      required: true
+      schema:
+        type: string
+        example: '"screen-pix_home-v17"'
+    LastModified:
+      description: Publication date of the selected immutable revision.
+      schema:
+        type: string
+        format: http-date
+    PrivateCache:
+      description: Allows short-lived private caching of published mobile content.
+      required: true
+      schema:
+        type: string
+        example: private, max-age=300
+    RepresentationVary:
+      description: |
+        Context dimensions that may change the representation. Cache keys must
+        include every listed dimension.
+      required: true
+      schema:
+        type: string
+        example: X-App-Platform, X-App-Build, X-Country-Code, Accept-Language, X-App-Capabilities
+
+  responses:
+    NotModified:
+      description: The cached representation is still current; no response body is returned.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+        ETag:
+          $ref: '#/components/headers/ETag'
+        Cache-Control:
+          $ref: '#/components/headers/PrivateCache'
+        Vary:
+          $ref: '#/components/headers/RepresentationVary'
+    BadRequest:
+      description: A required context header is missing or has an invalid format.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ConfigurationNotFound:
+      description: No published mobile configuration is available.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ScreenNotFound:
+      description: The requested published screen does not exist.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://openpix.dev/problems/screen-not-found
+            title: Screen not found
+            status: 404
+            detail: The requested screen does not exist.
+            instance: /mobile/v1/screens/pix_home
+            code: SDUI_SCREEN_NOT_FOUND
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+    UnsupportedContext:
+      description: Platform, country, currency, contract, or component versions are unsupported.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UpgradeRequired:
+      description: The app build is below the minimum supported build.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/AppUpdateProblem'
+          example:
+            type: https://openpix.dev/problems/app-version-unsupported
+            title: Application update required
+            status: 426
+            detail: This application build is no longer supported.
+            code: APP_UPDATE_REQUIRED
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+            minimumSupportedBuild: 10000
+            minimumSupportedVersion: 1.3.0
+    InternalServerError:
+      description: An unexpected error occurred while resolving published content.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    AppConfiguration:
+      type: object
+      additionalProperties: false
+      required: [contractVersion, features]
+      properties:
+        contractVersion:
+          type: integer
+          minimum: 1
+          description: Version of this configuration schema.
+        revision:
+          type: integer
+          minimum: 1
+          description: Immutable content revision; independent from contractVersion.
+        compatibility:
+          $ref: '#/components/schemas/AppCompatibility'
+        features:
+          type: array
+          maxItems: 100
+          description: Evaluated feature catalog; internal rollout rules are omitted.
+          items:
+            $ref: '#/components/schemas/Feature'
+
+    AppCompatibility:
+      type: object
+      additionalProperties: false
+      required: [status]
+      description: Optional update recommendation metadata for supported clients.
+      properties:
+        status:
+          type: string
+          enum: [SUPPORTED, UPDATE_RECOMMENDED]
+        minimumRecommendedBuild:
+          type: integer
+          minimum: 1
+        latestBuild:
+          type: integer
+          minimum: 1
+        updatePolicy:
+          type: string
+          enum: [NONE, OPTIONAL]
+        storeUrl:
+          type: string
+          format: uri
+
+    Feature:
+      type: object
+      additionalProperties: false
+      required: [id, visible, enabled, presentation]
+      properties:
+        id:
+          $ref: '#/components/schemas/ResourceId'
+        visible:
+          type: boolean
+          description: When false, the client must not render this feature.
+        enabled:
+          type: boolean
+          description: Whether the rendered feature accepts interaction.
+        disabledMessage:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: Safe localized explanation used only when the feature is disabled.
+        presentation:
+          $ref: '#/components/schemas/FeaturePresentation'
+
+    FeaturePresentation:
+      type: object
+      additionalProperties: false
+      required: [title, icon, style]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        subtitle:
+          type: string
+          maxLength: 200
+          nullable: true
+        icon:
+          allOf:
+            - $ref: '#/components/schemas/ResourceId'
+          description: Native asset key mapped by the mobile client.
+        style:
+          type: string
+          enum: [card, compact_card, list_item]
+          description: Native visual variant, not arbitrary rendering code.
+
+    Screen:
+      type: object
+      additionalProperties: false
+      required: [contractVersion, id, components]
+      properties:
+        contractVersion:
+          type: integer
+          minimum: 1
+          description: Version of this screen schema.
+        revision:
+          type: integer
+          minimum: 1
+          description: Immutable content revision; independent from contractVersion.
+        id:
+          $ref: '#/components/schemas/ResourceId'
+        title:
+          type: string
+          maxLength: 100
+          nullable: true
+        components:
+          type: array
+          maxItems: 200
+          description: Native components rendered in the returned order.
+          items:
+            $ref: '#/components/schemas/ScreenComponent'
+
+    ScreenComponent:
+      oneOf:
+        - $ref: '#/components/schemas/TextComponent'
+        - $ref: '#/components/schemas/FeatureComponent'
+        - $ref: '#/components/schemas/SpacerComponent'
+      discriminator:
+        propertyName: type
+        mapping:
+          text: '#/components/schemas/TextComponent'
+          feature: '#/components/schemas/FeatureComponent'
+          spacer: '#/components/schemas/SpacerComponent'
+
+    ComponentBase:
+      type: object
+      required: [id, type, compatibilityVersion]
+      properties:
+        id:
+          $ref: '#/components/schemas/ResourceId'
+        type:
+          type: string
+        compatibilityVersion:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          description: |
+            Renderer versions that can safely interpret this component
+            representation. The client must still handle incompatibility
+            defensively when rendering.
+          items:
+            type: string
+            pattern: '^\d+(?:\.\d+)*$'
+
+    TextComponent:
+      allOf:
+        - $ref: '#/components/schemas/ComponentBase'
+        - type: object
+          additionalProperties: false
+          required: [id, type, compatibilityVersion, text, style]
+          properties:
+            id:
+              $ref: '#/components/schemas/ResourceId'
+            type:
+              type: string
+              enum: [text]
+            compatibilityVersion:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items:
+                type: string
+                pattern: '^\d+(?:\.\d+)*$'
+            text:
+              type: string
+              minLength: 1
+              maxLength: 500
+            style:
+              type: string
+              enum: [title, subtitle, body, label]
+
+    FeatureComponent:
+      allOf:
+        - $ref: '#/components/schemas/ComponentBase'
+        - type: object
+          additionalProperties: false
+          required: [id, type, compatibilityVersion, featureId]
+          properties:
+            id:
+              $ref: '#/components/schemas/ResourceId'
+            type:
+              type: string
+              enum: [feature]
+            compatibilityVersion:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items:
+                type: string
+                pattern: '^\d+(?:\.\d+)*$'
+            featureId:
+              allOf:
+                - $ref: '#/components/schemas/ResourceId'
+              description: Feature catalog reference validated before publication.
+
+    SpacerComponent:
+      allOf:
+        - $ref: '#/components/schemas/ComponentBase'
+        - type: object
+          additionalProperties: false
+          required: [id, type, compatibilityVersion, size]
+          properties:
+            id:
+              $ref: '#/components/schemas/ResourceId'
+            type:
+              type: string
+              enum: [spacer]
+            compatibilityVersion:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items:
+                type: string
+                pattern: '^\d+(?:\.\d+)*$'
+            size:
+              type: string
+              enum: [small, medium, large]
+
+    ResourceId:
+      type: string
+      pattern: '^[a-z][a-z0-9_]{1,63}$'
+      description: Stable public identifier.
+
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, detail, code, correlationId]
+      description: RFC 9457 Problem Details with stable machine code and correlation.
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+          pattern: '^(SDUI|APP|CONTEXT)_[A-Z0-9_]+$'
+        correlationId:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    AppUpdateProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [minimumSupportedBuild]
+          properties:
+            minimumSupportedBuild:
+              type: integer
+              minimum: 1
+            minimumSupportedVersion:
+              type: string
+            storeUrl:
+              type: string
+              format: uri
+
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string

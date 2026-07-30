@@ -1,0 +1,28 @@
+{
+  "contractVersion": 1,
+  "features": [
+    {
+      "id": "pix_qr",
+      "visible": true,
+      "enabled": false,
+      "presentation": {
+        "title": "QR Code",
+        "subtitle": "Escaneie um código Pix",
+        "icon": "qr_code",
+        "style": "card"
+      }
+    },
+    {
+      "id": "pix_nfc",
+      "visible": true,
+      "enabled": false,
+      "disabledMessage": "Disponível em breve",
+      "presentation": {
+        "title": "Pix por aproximação",
+        "subtitle": "Aproxime o celular para pagar",
+        "icon": "pix_nfc",
+        "style": "card"
+      }
+    }
+  ]
+}

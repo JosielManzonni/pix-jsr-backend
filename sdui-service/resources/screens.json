@@ -1,0 +1,42 @@
+{
+  "contractVersion": 1,
+  "screens": [
+    {
+      "id": "pix_home",
+      "title": "Pix",
+      "components": [
+        {
+          "id": "home_title",
+          "type": "text",
+          "compatibilityVersion": ["1"],
+          "text": "Como deseja pagar?",
+          "style": "title"
+        },
+        {
+          "id": "title_spacing",
+          "type": "spacer",
+          "compatibilityVersion": ["1"],
+          "size": "medium"
+        },
+        {
+          "id": "pix_qr_entry",
+          "type": "feature",
+          "compatibilityVersion": ["1"],
+          "featureId": "pix_qr"
+        },
+        {
+          "id": "pix_nfc_entry",
+          "type": "feature",
+          "compatibilityVersion": ["1"],
+          "featureId": "pix_nfc"
+        },
+        {
+          "id": "tap2transfer_entry",
+          "type": "feature",
+          "compatibilityVersion": ["1"],
+          "featureId": "tap2transfer"
+        }
+      ]
+    }
+  ]
+}

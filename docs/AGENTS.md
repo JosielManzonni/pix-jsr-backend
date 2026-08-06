@@ -9,6 +9,24 @@ Guidance for editing documentation in this repository.
 - `architecture/generated/knowledge-graph.jsonld` is a deterministic derived
   projection of the Markdown. Never edit it by hand.
 
+## OpenSpec layer awareness
+
+- `docs/` and `openspec/` are two separate layers of the same repository:
+  `docs/` records architecture (context, decisions, rationale); `openspec/`
+  records behavioral requirements (specs, Given/When/Then, SHALL/MUST).
+- They are mutually aware: the canonical spec of a capability lives in
+  `openspec/specs/`; `docs/architecture` notes (RFCs/ADRs/contexts) must
+  reflect archived specs — when a change is archived and made canonical,
+  reconcile docs with it.
+- When editing `docs/`: check the related `openspec/specs/<capability>/spec.md`
+  for behavioral constraints; do not state facts in docs that contradict a
+  canonical spec, and reference the spec rather than duplicating it.
+- When an openspec change archives a new canonical spec: update the relevant
+  RFC/ADR, resolve knowledge-graph links, update service ownership (root
+  `AGENTS.md`), and keep the OpenAPI contract in sync. Drift between layers is
+  a defect.
+- `openspec/AGENTS.md` defines the spec layer side of this relationship.
+
 ## Frontmatter and wikilinks
 
 - Every note in `architecture/` has frontmatter with a global `id`, `type`,

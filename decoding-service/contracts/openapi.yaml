@@ -1,0 +1,225 @@
+openapi: 3.0.3
+
+info:
+  title: OpenPix JSR Pix Decoding API
+  version: 1.0.0
+  description: |
+    Stateless Pix/BR Code decoding boundary. It accepts a raw Pix payload and
+    returns a normalized, interpreted payment instruction, or a Problem Details
+    body when the payload fails strict validation. Decoding never creates or
+    persists a payment, and never logs the payload or decoded key material.
+  license:
+    name: GNU General Public License v3.0
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  - url: /
+    description: Host selected by the deployment environment.
+
+tags:
+  - name: Pix payload decoding
+    description: Strict validation and interpretation of raw Pix BR Code payloads.
+
+paths:
+  /decode/v1/pix-payloads:
+    post:
+      tags: [Pix payload decoding]
+      summary: Decode a raw Pix BR Code payload
+      description: |
+        Parses the payload as an EMV TLV chain, verifies the CRC16, and returns
+        the interpreted payment instruction. Any validation failure is rejected
+        with 422 and a Problem Details body carrying a stable machine code and
+        the effective correlation id.
+      operationId: decodePixPayload
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecodePayloadRequest'
+            example:
+              payload: "00020101021226580014BR.GOV.BCB.PIX0136..."
+      responses:
+        '200':
+          description: Payload decoded successfully.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecodedInstruction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+components:
+  parameters:
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: |
+        End-to-end identifier. A valid client value is propagated; otherwise
+        the server generates and returns a new one.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+
+  headers:
+    CorrelationId:
+      description: Effective correlation identifier used by the service.
+      required: true
+      schema:
+        type: string
+
+  responses:
+    BadRequest:
+      description: The request body is missing or has an invalid shape.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://openpix.dev/problems/context-invalid-request
+            title: Invalid request context
+            status: 400
+            detail: "Invalid or missing request value: payload."
+            code: CONTEXT_INVALID_REQUEST
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+    ValidationFailed:
+      description: The payload failed strict decoding validation.
+      headers:
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://openpix.dev/problems/decoding-crc-mismatch
+            title: CRC mismatch
+            status: 422
+            detail: The payload CRC does not match the computed CRC16.
+            code: DECODING_CRC_MISMATCH
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+
+  schemas:
+    DecodePayloadRequest:
+      type: object
+      additionalProperties: false
+      required: [payload]
+      properties:
+        payload:
+          type: string
+          description: |
+            Raw Pix BR Code payload string to decode. Its length, emptiness,
+            and charset are enforced by the decoder so they map to decoding
+            error codes, not request-shape failures.
+
+    DecodedInstruction:
+      type: object
+      additionalProperties: false
+      required: [mode, merchant_name, merchant_city, crc_valid]
+      description: Normalized, interpreted payment instruction derived from the payload.
+      properties:
+        key:
+          type: string
+          nullable: true
+          description: |
+            Recipient Pix key carried by the payload. Present for key-based
+            instructions (static always; dynamic when carried); null when the
+            dynamic instruction is location-based.
+        key_type:
+          $ref: '#/components/schemas/KeyType'
+          nullable: true
+          description: |
+            Detected Pix key format. Null when the instruction is location-based.
+        location:
+          type: string
+          nullable: true
+          description: |
+            Dynamic QR location (tag 26.25). Present only for dynamic,
+            location-based instructions; the raw value is echoed without
+            scheme or URL-shape validation. Null for key-based instructions.
+        mode:
+          $ref: '#/components/schemas/Mode'
+        amount:
+          type: string
+          nullable: true
+          pattern: '^\d{1,10}\.\d{2}$'
+          description: Optional payment amount with exactly two decimal places.
+        txid:
+          type: string
+          nullable: true
+          description: Optional transaction identifier; echoed for static codes when present.
+        description:
+          type: string
+          nullable: true
+          description: Optional reference label or description carried by the payload.
+        merchant_name:
+          type: string
+        merchant_city:
+          type: string
+        mcc:
+          type: string
+          nullable: true
+          description: Optional merchant category code; absent when not carried.
+        crc_valid:
+          type: boolean
+          enum: [true]
+          description: Always true; a valid CRC is required for a 200 response.
+
+    KeyType:
+      type: string
+      enum: [cpf, cnpj, phone, email, evp]
+      description: Detected Pix key format.
+
+    Mode:
+      type: string
+      enum: [static, dynamic]
+      description: Static (PIM 11 or absent) or dynamic (PIM 12) initiation mode.
+
+    DecodeErrorCode:
+      type: string
+      enum:
+        - DECODING_PAYLOAD_TOO_LONG
+        - DECODING_INVALID_CHARSET
+        - DECODING_MALFORMED_TLV
+        - DECODING_CRC_MISMATCH
+        - DECODING_MISSING_MANDATORY_FIELD
+        - DECODING_UNSUPPORTED_CURRENCY
+        - DECODING_INVALID_KEY
+        - DECODING_INVALID_PAYLOAD
+        - CONTEXT_INVALID_REQUEST
+      description: Stable machine code identifying the validation failure class.
+
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, detail, code, correlationId]
+      description: RFC 9457 Problem Details with stable machine code and correlation.
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        code:
+          $ref: '#/components/schemas/DecodeErrorCode'
+        correlationId:
+          type: string

@@ -15,8 +15,15 @@ context. Each is owned by its own service directory:
 - **payment** — payment lifecycle and idempotency.
 - **observability** — health, metrics, logs, traces.
 
-Only `sdui-service/` exists today. The other three are documented boundaries
-only; do not create them or invent their behavior.
+Implemented services:
+
+- `sdui-service/` — owns the **sdui** context. Tests: `python -m pytest` from
+  `sdui-service/`.
+- `decoding-service/` — owns the **decoding** context. Tests:
+  `.venv/bin/python -m pytest` from `decoding-service/`.
+
+`payment` and `observability` are documented boundaries only; do not create
+them or invent their behavior.
 
 ## Source of truth
 
@@ -24,8 +31,8 @@ only; do not create them or invent their behavior.
 - `docs/architecture/generated/knowledge-graph.jsonld` is a deterministic
   derived projection; never edit it by hand.
 - Each service directory owns its runtime and its contract
-  (`sdui-service/contracts/openapi.yaml`). Contract changes belong with that
-  service.
+  (`sdui-service/contracts/openapi.yaml`, `decoding-service/contracts/openapi.yaml`).
+  Contract changes belong with that service.
 
 ## Rules
 

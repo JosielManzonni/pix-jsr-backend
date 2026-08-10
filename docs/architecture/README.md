@@ -6,7 +6,7 @@ title: OpenPix JSR Architecture Knowledge Graph
 status: active
 context: platform
 created: 2026-07-29
-updated: 2026-07-30
+updated: 2026-08-09
 tags:
   - architecture
   - knowledge-graph
@@ -26,6 +26,8 @@ relations:
     target: ctx-payment
   - type: contains
     target: ctx-observability
+  - type: contains
+    target: ref-bacen-pix-dict
 ---
 
 # OpenPix JSR Architecture Knowledge Graph
@@ -44,6 +46,7 @@ ou busca semântica no futuro.
 - [[CTX-DECODING]] reúne interpretação de payloads Pix.
 - [[CTX-PAYMENT]] reúne o ciclo de vida de pagamentos.
 - [[CTX-OBSERVABILITY]] reúne saúde, métricas, logs e traces.
+- [[ref-bacen-pix-dict|BACEN Pix/DICT]] é a referência canônica externa (regulamento, manual DICT, API DICT).
 
 ## RFCs
 

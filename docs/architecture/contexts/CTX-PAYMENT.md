@@ -6,7 +6,7 @@ title: Payment Lifecycle Context
 status: active
 context: payment
 created: 2026-07-29
-updated: 2026-07-29
+updated: 2026-08-09
 tags: [context, payment, idempotency, state-machine]
 relations:
   - type: depends_on
@@ -17,6 +17,8 @@ relations:
     target: ctx-decoding
   - type: related_to
     target: ctx-sdui
+  - type: related_to
+    target: ref-bacen-pix-dict
 ---
 
 # Payment Lifecycle
@@ -32,3 +34,4 @@ SDUI nem decide como um payload é lido.
 - [[CTX-DECODING]]
 - [[CTX-SDUI]]
 - [[CTX-OBSERVABILITY]]
+- [[ref-bacen-pix-dict|BACEN Pix/DICT Canonical Reference]]

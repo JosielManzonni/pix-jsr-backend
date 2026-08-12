@@ -15,7 +15,17 @@ renderer compatibility. It does not execute payments or interpret Pix payloads.
 - `utils.py` — helpers (resource loading, ETags).
 - `resources/configuration.json` and `resources/screens.json` — static runtime
   sources read by the service.
-- `resources/assets/` — supporting assets.
+- `resources/assets/` — supporting assets actually read at runtime (e.g.
+  `pix_home` mockup assets). Architecture diagrams do not belong here — see
+  `docs/diagrams/`.
+
+## Docs
+
+- `docs/adrs/`, `docs/rfcs/` — decisions owned by this service.
+- `docs/diagrams/` — Mermaid/Excalidraw sources for this service.
+- `docs/medium/` — brief context for regenerating the Medium articles that
+  live in `pix-jsr-publication` (not duplicated here).
+- Cross-service context: `../docs/architecture/contexts/CTX-SDUI.md`.
 
 ## Contract and models
 

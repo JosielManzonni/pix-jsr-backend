@@ -48,28 +48,35 @@ ou busca semântica no futuro.
 - [[CTX-OBSERVABILITY]] reúne saúde, métricas, logs e traces.
 - [[ref-bacen-pix-dict|BACEN Pix/DICT]] é a referência canônica externa (regulamento, manual DICT, API DICT).
 
-## RFCs
+## Onde vivem as decisões
+
+Este índice reúne apenas o que é transversal a mais de um serviço:
+schema de metadados, ontologia, contextos e o knowledge graph gerado.
+
+ADRs, RFCs e diagramas de um contexto **implementado** ficam junto do
+serviço que o possui, não aqui:
+
+- **sdui** → `sdui-service/docs/{adrs,rfcs,diagrams}`
+- **decoding** → `decoding-service/docs/{adrs,rfcs}`
+- **payment** → ainda não implementado como serviço; a proposta vive em
+  `openspec/changes/add-payment-service/` até ser arquivada.
+- **observability** → ainda não implementado; nenhum ADR/RFC existe além do
+  contexto documentado em [[CTX-OBSERVABILITY]].
+
+Apenas decisões verdadeiramente cross-service ficam neste `docs/architecture/`:
+
+## RFCs (cross-cutting)
 
 - [[RFC-PLATFORM-001-contract-first-service-boundaries]]
-- [[RFC-SDUI-001-mobile-context-and-component-compatibility]]
-- [[RFC-DECODING-001-pix-payload-decoding-boundary]]
-- [[RFC-PAYMENT-001-payment-lifecycle-and-idempotency]]
-- [[RFC-OBSERVABILITY-001-operational-observability-interface]]
 
-## ADRs
+## ADRs (cross-cutting)
 
 - [[ADR-PLATFORM-001-service-local-openapi-contracts]]
-- [[ADR-SDUI-001-typed-request-context-dependencies]]
-- [[ADR-SDUI-002-static-json-runtime-source]]
-- [[ADR-DECODING-001-stateless-payload-decoding]]
-- [[ADR-PAYMENT-001-aggregate-state-machine]]
-- [[ADR-OBSERVABILITY-001-pull-based-operational-endpoints]]
 
-## Artigos
-
-- [[01-o-que-e-sdui]]
-- [[02-contract-first-sdui-backend]]
-- [[03-sdui-compatibility-prevention-reaction]]
+Os artigos do Medium gerados a partir deste backend não vivem neste
+repositório. Eles são publicados em `pix-jsr-publication`; cada serviço
+guarda o brief necessário para regerá-los em `<service>/docs/medium/`
+(ver `sdui-service/docs/medium/README.md`).
 
 ## Regra de manutenção
 

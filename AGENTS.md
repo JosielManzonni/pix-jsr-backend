@@ -27,7 +27,14 @@ them or invent their behavior.
 
 ## Source of truth
 
-- Markdown under `docs/architecture/` is authoritative.
+- `docs/architecture/` holds only what is cross-service: metadata schema,
+  ontology, bounded-context index (`contexts/CTX-*.md`), the generated
+  knowledge graph, and any ADR/RFC that is genuinely platform-wide
+  (`ADR-PLATFORM-001`, `RFC-PLATFORM-001`).
+- A service's own ADRs, RFCs and diagrams live beside that service, not in
+  `docs/architecture/`: `sdui-service/docs/{adrs,rfcs,diagrams}`,
+  `decoding-service/docs/{adrs,rfcs}`. A service's medium-article brief
+  lives in `<service>/docs/medium/`.
 - `docs/architecture/generated/knowledge-graph.jsonld` is a deterministic
   derived projection; never edit it by hand.
 - Each service directory owns its runtime and its contract

@@ -6,6 +6,8 @@ when the payload fails strict validation.
 
 ## Layout
 
+- `docs/adrs/`, `docs/rfcs/` — decisions owned by this service. Cross-service
+  context: `../docs/architecture/contexts/CTX-DECODING.md`.
 - `contracts/openapi.yaml` — the authoritative OpenAPI contract (the only
   interface of this service). `models.py` is generated from it.
 - `models.py` — pydantic models generated with `datamodel-code-generator`.

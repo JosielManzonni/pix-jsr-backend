@@ -35,3 +35,19 @@ when the payload fails strict validation.
 - **Stateless:** no caching, no ETags, no persistence.
 - **Verification:** all tests via `.venv/bin/python -m pytest` from this
   directory; run the sdui-service suite to confirm no cross-service regression.
+
+## Operational surface (observability change)
+
+- `GET /health` and `GET /ready` (contract paths, `ServiceStatus` model) are
+  never cached and never depend on other services.
+- `GET /metrics` runs on a separate port (`METRICS_PORT`, default 9100),
+  Prometheus text exposition format 0.0.4, served by the shared
+  `openpix_observability` package hosted in `observability-service/`. It is
+  deliberately absent from the OpenAPI contract.
+- **Deployment gate:** the metrics port MUST be restricted by network policy;
+  no in-app credential scheme exists.
+- Runtime: `python main.py` starts both listeners; `uvicorn main:app` starts
+  the API only. `APP_PORT`/`APP_HOST`/`METRICS_PORT`/`METRICS_HOST` from env.
+- Data policy: correlation IDs never become metric labels; the payload string
+  and decoded key material never appear in metrics or logs (covered by
+  tests). Labels come from OpenAPI operationIds only.

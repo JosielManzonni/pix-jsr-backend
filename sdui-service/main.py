@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
+
+# observability-service hosts the shared instrumentation package; make it
+# importable regardless of the working directory or PYTHONPATH.
+sys.path.append(str(Path(__file__).resolve().parent.parent / "observability-service"))
 
 from fastapi import Depends, FastAPI, Header, Path, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -13,6 +19,8 @@ from models import (
     AppUpdateProblem,
     Problem,
     Screen,
+    ServiceStatus,
+    Status1,
     XAppDistribution,
     XAppPlatform,
     XCountryCode,
@@ -25,6 +33,13 @@ from utils import (
     build_etag,
     read_configuration,
     read_screen,
+)
+from openpix_observability import (
+    ObservabilityMiddleware,
+    configure_logging,
+    get_correlation_id,
+    register_probes,
+    serve,
 )
 
 AppVersion = Annotated[
@@ -113,7 +128,7 @@ class ApiProblemError(Exception):
 
 app = FastAPI(
     title="OpenPix JSR Mobile SDUI API",
-    version="1.1.0",
+    version="1.2.0",
     description=(
         "Mobile read contract for evaluated feature configuration and native "
         "SDUI screen composition."
@@ -127,9 +142,16 @@ app = FastAPI(
     ],
 )
 
+app.add_middleware(ObservabilityMiddleware)
+configure_logging()
+
+register_probes(app, response_model=ServiceStatus, ok_value=Status1.ok)
+
 
 def _effective_correlation_id(value: str | None) -> str:
-    return value or str(uuid4())
+    # The middleware already resolved the effective id for this request
+    # (header value or generated); reuse it so logs and responses agree.
+    return value or get_correlation_id() or str(uuid4())
 
 
 def _parse_capabilities(value: str | None) -> frozenset[str]:
@@ -391,6 +413,7 @@ def _validate_component_compatibility(
 
 @app.get(
     "/mobile/v1/configuration",
+    operation_id="getMobileConfiguration",
     response_model=AppConfiguration,
     responses={
         400: {"model": Problem},
@@ -425,6 +448,7 @@ async def get_mobile_configuration(
 
 @app.get(
     "/mobile/v1/screens/{screenId}",
+    operation_id="getMobileScreen",
     response_model=Screen,
     responses={
         400: {"model": Problem},
@@ -465,3 +489,7 @@ async def get_mobile_screen(
 
     _apply_headers(response, headers)
     return screen
+
+
+if __name__ == "__main__":
+    serve(app)

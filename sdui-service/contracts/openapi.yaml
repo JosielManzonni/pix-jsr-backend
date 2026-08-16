@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: OpenPix JSR Mobile SDUI API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     Mobile read contract for evaluated feature configuration and native SDUI
     screen composition. It includes the version, regional, capability,
@@ -24,8 +24,43 @@ tags:
     description: Evaluated feature availability for the current mobile context.
   - name: Mobile screens
     description: Versioned native screen documents composed by the backend.
+  - name: Operational probes
+    description: Liveness and readiness probes. Never cached.
 
 paths:
+  /health:
+    get:
+      tags: [Operational probes]
+      summary: Liveness probe
+      description: |
+        Returns 200 when the process is alive and serving. The probe has no
+        dependencies on other services and its response is never cached.
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
+  /ready:
+    get:
+      tags: [Operational probes]
+      summary: Readiness probe
+      description: |
+        Returns 200 when the process can accept work. Readiness reflects only
+        this process; it never depends on the readiness of observed services,
+        so an outage elsewhere cannot make observability itself not-ready.
+      operationId: getReady
+      security: []
+      responses:
+        '200':
+          description: Process is ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
   /mobile/v1/configuration:
     get:
       tags: [Mobile configuration]
@@ -477,6 +512,16 @@ components:
             $ref: '#/components/schemas/Problem'
 
   schemas:
+    ServiceStatus:
+      type: object
+      additionalProperties: false
+      required: [status]
+      description: Operational probe result. Never contains sensitive data.
+      properties:
+        status:
+          type: string
+          enum: [ok]
+
     AppConfiguration:
       type: object
       additionalProperties: false

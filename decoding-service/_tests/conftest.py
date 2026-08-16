@@ -5,3 +5,5 @@ from pathlib import Path
 
 SERVICE_DIRECTORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SERVICE_DIRECTORY))
+# observability-service hosts the shared instrumentation package.
+sys.path.append(str(Path(__file__).resolve().parents[2] / "observability-service"))

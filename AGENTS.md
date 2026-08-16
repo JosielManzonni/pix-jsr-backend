@@ -21,9 +21,14 @@ Implemented services:
   `sdui-service/`.
 - `decoding-service/` — owns the **decoding** context. Tests:
   `.venv/bin/python -m pytest` from `decoding-service/`.
+- `observability-service/` — owns the **observability** context (health,
+  readiness, metrics, traces, logs) and hosts the shared
+  `openpix_observability` instrumentation package used by every service.
+  Tests: `.venv/bin/python -m pytest` from `observability-service/`.
 
-`payment` and `observability` are documented boundaries only; do not create
-them or invent their behavior.
+`payment` is a documented boundary only; do not create it or invent its
+behavior. The observability context is implemented; its metrics port MUST be
+restricted by network policy in any deployment (see the service `AGENTS.md`).
 
 ## Source of truth
 
@@ -31,8 +36,10 @@ them or invent their behavior.
 - `docs/architecture/generated/knowledge-graph.jsonld` is a deterministic
   derived projection; never edit it by hand.
 - Each service directory owns its runtime and its contract
-  (`sdui-service/contracts/openapi.yaml`, `decoding-service/contracts/openapi.yaml`).
-  Contract changes belong with that service.
+  (`sdui-service/contracts/openapi.yaml`,
+  `decoding-service/contracts/openapi.yaml`,
+  `observability-service/contracts/openapi.yaml`). Contract changes belong
+  with that service.
 
 ## Rules
 

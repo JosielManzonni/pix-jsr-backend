@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
@@ -10,18 +11,31 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import StringConstraints
 
+# observability-service hosts the shared instrumentation package; make it
+# importable regardless of the working directory or PYTHONPATH.
+sys.path.append(str(Path(__file__).resolve().parent.parent / "observability-service"))
+
 from interpreter import interpret
 from models import (
     DecodeErrorCode,
     DecodedInstruction,
     DecodePayloadRequest,
     ProblemDetails,
+    ServiceStatus,
+    Status,
 )
 from utils import DecodeError
+from openpix_observability import (
+    ObservabilityMiddleware,
+    configure_logging,
+    get_correlation_id,
+    register_probes,
+    serve,
+)
 
 app = FastAPI(
     title="OpenPix JSR Pix Decoding API",
-    version="1.0.0",
+    version="1.1.0",
     description=(
         "Stateless Pix/BR Code decoding boundary: validates and normalizes a "
         "raw payload into an interpreted payment instruction. It never creates "
@@ -52,6 +66,11 @@ def custom_openapi() -> dict:
 
 app.openapi = custom_openapi
 
+app.add_middleware(ObservabilityMiddleware)
+configure_logging()
+
+register_probes(app, response_model=ServiceStatus, ok_value=Status.ok)
+
 _TITLE_BY_CODE: dict[DecodeErrorCode, str] = {
     DecodeErrorCode.DECODING_PAYLOAD_TOO_LONG: "Payload too long",
     DecodeErrorCode.DECODING_INVALID_CHARSET: "Invalid character set",
@@ -66,7 +85,9 @@ _TITLE_BY_CODE: dict[DecodeErrorCode, str] = {
 
 
 def _effective_correlation_id(value: str | None) -> str:
-    return value or str(uuid4())
+    # The middleware already resolved the effective id for this request
+    # (header value or generated); reuse it so logs and responses agree.
+    return value or get_correlation_id() or str(uuid4())
 
 
 def _problem_response(
@@ -127,6 +148,7 @@ async def request_validation_exception_handler(
 
 @app.post(
     "/decode/v1/pix-payloads",
+    operation_id="decodePixPayload",
     response_model=DecodedInstruction,
     responses={422: {"model": ProblemDetails}},
     tags=["Pix payload decoding"],
@@ -143,3 +165,7 @@ async def decode_pix_payload(
     # Problem Details body via the exception handler above.
     response.headers["X-Correlation-ID"] = _effective_correlation_id(correlation_id)
     return interpret(body.payload)
+
+
+if __name__ == "__main__":
+    serve(app)

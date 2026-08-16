@@ -135,7 +135,9 @@ def test_static_without_key_is_missing():
 
 
 def test_static_ignores_present_location_when_key_is_authoritative():
-    result = interpreter.interpret(_dynamic(pim="11", key=VALID_CPF, location="ignored"))
+    result = interpreter.interpret(
+        _dynamic(pim="11", key=VALID_CPF, location="ignored")
+    )
     assert result.mode is Mode.static
     assert result.key == VALID_CPF
     assert result.location is None
@@ -154,10 +156,14 @@ def test_unknown_tag_above_crc_before_crc_is_ignored():
     # before the final CRC. It must be ignored, not rejected by the ordering
     # rule, which exempts the final CRC tag.
     payload = _build(
-        _tlv("00", "01") + _tlv("01", "12")
+        _tlv("00", "01")
+        + _tlv("01", "12")
         + _tlv("26", _tlv("00", "br.gov.bcb.pix") + _tlv("01", VALID_CPF))
-        + _tlv("53", "986") + _tlv("58", "BR") + _tlv("59", "Merchant")
-        + _tlv("60", "BRASILIA") + _tlv("62", _tlv("05", "TXID123"))
+        + _tlv("53", "986")
+        + _tlv("58", "BR")
+        + _tlv("59", "Merchant")
+        + _tlv("60", "BRASILIA")
+        + _tlv("62", _tlv("05", "TXID123"))
         + _tlv("64", "ab")
     )
     result = interpreter.interpret(payload)
@@ -377,9 +383,14 @@ def test_invalid_mcc_is_rejected(mcc):
 def test_malformed_nested_length_in_26_is_rejected():
     sub26 = "00" + "99" + "br.gov"
     payload = _build(
-        _tlv("00", "01") + _tlv("01", "12") + _tlv("26", sub26)
-        + _tlv("53", "986") + _tlv("58", "BR") + _tlv("59", "M")
-        + _tlv("60", "C") + _tlv("62", _tlv("05", "TX"))
+        _tlv("00", "01")
+        + _tlv("01", "12")
+        + _tlv("26", sub26)
+        + _tlv("53", "986")
+        + _tlv("58", "BR")
+        + _tlv("59", "M")
+        + _tlv("60", "C")
+        + _tlv("62", _tlv("05", "TX"))
     )
     with pytest.raises(DecodeError) as excinfo:
         interpreter.interpret(payload)
@@ -390,9 +401,14 @@ def test_nested_out_of_order_sub_tags_is_rejected():
     # Sub-tags inside 26 must be non-descending: "01" before "00" is descending.
     sub26 = _tlv("01", VALID_CPF) + _tlv("00", "br.gov.bcb.pix")
     payload = _build(
-        _tlv("00", "01") + _tlv("01", "12") + _tlv("26", sub26)
-        + _tlv("53", "986") + _tlv("58", "BR") + _tlv("59", "M")
-        + _tlv("60", "C") + _tlv("62", _tlv("05", "TX"))
+        _tlv("00", "01")
+        + _tlv("01", "12")
+        + _tlv("26", sub26)
+        + _tlv("53", "986")
+        + _tlv("58", "BR")
+        + _tlv("59", "M")
+        + _tlv("60", "C")
+        + _tlv("62", _tlv("05", "TX"))
     )
     with pytest.raises(DecodeError) as excinfo:
         interpreter.interpret(payload)
@@ -402,9 +418,14 @@ def test_nested_out_of_order_sub_tags_is_rejected():
 def test_non_digit_nested_tag_is_rejected():
     sub26 = "0A" + "02" + "ab" + _tlv("01", VALID_CPF)
     payload = _build(
-        _tlv("00", "01") + _tlv("01", "12") + _tlv("26", sub26)
-        + _tlv("53", "986") + _tlv("58", "BR") + _tlv("59", "M")
-        + _tlv("60", "C") + _tlv("62", _tlv("05", "TX"))
+        _tlv("00", "01")
+        + _tlv("01", "12")
+        + _tlv("26", sub26)
+        + _tlv("53", "986")
+        + _tlv("58", "BR")
+        + _tlv("59", "M")
+        + _tlv("60", "C")
+        + _tlv("62", _tlv("05", "TX"))
     )
     with pytest.raises(DecodeError) as excinfo:
         interpreter.interpret(payload)
@@ -418,9 +439,14 @@ def test_duplicate_known_sub_tag_in_26_is_rejected():
         + _tlv("01", VALID_CPF)
     )
     payload = _build(
-        _tlv("00", "01") + _tlv("01", "12") + _tlv("26", sub26)
-        + _tlv("53", "986") + _tlv("58", "BR") + _tlv("59", "M")
-        + _tlv("60", "C") + _tlv("62", _tlv("05", "TX"))
+        _tlv("00", "01")
+        + _tlv("01", "12")
+        + _tlv("26", sub26)
+        + _tlv("53", "986")
+        + _tlv("58", "BR")
+        + _tlv("59", "M")
+        + _tlv("60", "C")
+        + _tlv("62", _tlv("05", "TX"))
     )
     with pytest.raises(DecodeError) as excinfo:
         interpreter.interpret(payload)
@@ -428,15 +454,16 @@ def test_duplicate_known_sub_tag_in_26_is_rejected():
 
 
 def test_unknown_sub_tags_are_ignored():
-    sub26 = (
-        _tlv("00", "br.gov.bcb.pix")
-        + _tlv("01", VALID_CPF)
-        + _tlv("03", "ab")
-    )
+    sub26 = _tlv("00", "br.gov.bcb.pix") + _tlv("01", VALID_CPF) + _tlv("03", "ab")
     payload = _build(
-        _tlv("00", "01") + _tlv("01", "12") + _tlv("26", sub26)
-        + _tlv("53", "986") + _tlv("58", "BR") + _tlv("59", "M")
-        + _tlv("60", "C") + _tlv("62", _tlv("05", "TX"))
+        _tlv("00", "01")
+        + _tlv("01", "12")
+        + _tlv("26", sub26)
+        + _tlv("53", "986")
+        + _tlv("58", "BR")
+        + _tlv("59", "M")
+        + _tlv("60", "C")
+        + _tlv("62", _tlv("05", "TX"))
     )
     result = interpreter.interpret(payload)
     assert result.key == VALID_CPF
@@ -451,9 +478,14 @@ def test_unknown_sub_tags_are_ignored():
         # malformed nested TLV + bad CRC -> parse (step 3) beats CRC (step 6)
         pytest.param(
             _build(
-                _tlv("00", "01") + _tlv("01", "12") + _tlv("26", "0099br.gov")
-                + _tlv("53", "986") + _tlv("58", "BR") + _tlv("59", "M")
-                + _tlv("60", "C") + _tlv("62", _tlv("05", "TX"))
+                _tlv("00", "01")
+                + _tlv("01", "12")
+                + _tlv("26", "0099br.gov")
+                + _tlv("53", "986")
+                + _tlv("58", "BR")
+                + _tlv("59", "M")
+                + _tlv("60", "C")
+                + _tlv("62", _tlv("05", "TX"))
             ),
             DecodeErrorCode.DECODING_MALFORMED_TLV,
             id="malformed-nested-beats-crc",
@@ -504,7 +536,7 @@ def test_non_ascii_value_maps_to_invalid_charset():
 
 
 def test_non_latin1_value_maps_to_invalid_charset():
-    payload = _dynamic_parts(name="Mer\U0001F600chant") + "6304ABCD"
+    payload = _dynamic_parts(name="Mer\U0001f600chant") + "6304ABCD"
     with pytest.raises(DecodeError) as excinfo:
         interpreter.interpret(payload)
     assert excinfo.value.code == DecodeErrorCode.DECODING_INVALID_CHARSET

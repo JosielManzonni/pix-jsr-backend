@@ -24,7 +24,9 @@ def _tamper_crc(payload: str) -> str:
     return payload[:-1] + ("0" if last != "0" else "1")
 
 
-def api_post(payload: object = None, headers: dict[str, str] | None = None) -> httpx.Response:
+def api_post(
+    payload: object = None, headers: dict[str, str] | None = None
+) -> httpx.Response:
     body = {"payload": payload} if payload is not None else {}
 
     async def request() -> httpx.Response:
@@ -118,8 +120,7 @@ def test_crc_problem_type_uri_is_exact():
     response = api_post(_tamper_crc(_dynamic()))
     assert response.status_code == 422
     assert (
-        response.json()["type"]
-        == "https://openpix.dev/problems/decoding-crc-mismatch"
+        response.json()["type"] == "https://openpix.dev/problems/decoding-crc-mismatch"
     )
 
 

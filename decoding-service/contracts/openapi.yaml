@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: OpenPix JSR Pix Decoding API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Stateless Pix/BR Code decoding boundary. It accepts a raw Pix payload and
     returns a normalized, interpreted payment instruction, or a Problem Details
@@ -19,8 +19,43 @@ servers:
 tags:
   - name: Pix payload decoding
     description: Strict validation and interpretation of raw Pix BR Code payloads.
+  - name: Operational probes
+    description: Liveness and readiness probes. Never cached.
 
 paths:
+  /health:
+    get:
+      tags: [Operational probes]
+      summary: Liveness probe
+      description: |
+        Returns 200 when the process is alive and serving. The probe has no
+        dependencies on other services and its response is never cached.
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
+  /ready:
+    get:
+      tags: [Operational probes]
+      summary: Readiness probe
+      description: |
+        Returns 200 when the process can accept work. Readiness reflects only
+        this process; it never depends on the readiness of observed services,
+        so an outage elsewhere cannot make observability itself not-ready.
+      operationId: getReady
+      security: []
+      responses:
+        '200':
+          description: Process is ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
   /decode/v1/pix-payloads:
     post:
       tags: [Pix payload decoding]
@@ -34,6 +69,8 @@ paths:
       security: []
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Traceparent'
+        - $ref: '#/components/parameters/Tracestate'
       requestBody:
         required: true
         content:
@@ -70,6 +107,22 @@ components:
         type: string
         minLength: 1
         maxLength: 128
+    Traceparent:
+      name: traceparent
+      in: header
+      required: false
+      description: W3C Trace Context propagated across Python and Java services.
+      schema:
+        type: string
+        pattern: '^[\da-f]{2}-[\da-f]{32}-[\da-f]{16}-[\da-f]{2}$'
+    Tracestate:
+      name: tracestate
+      in: header
+      required: false
+      description: Optional W3C vendor-specific trace state.
+      schema:
+        type: string
+        maxLength: 512
 
   headers:
     CorrelationId:
@@ -113,6 +166,16 @@ components:
             correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
 
   schemas:
+    ServiceStatus:
+      type: object
+      additionalProperties: false
+      required: [status]
+      description: Operational probe result. Never contains sensitive data.
+      properties:
+        status:
+          type: string
+          enum: [ok]
+
     DecodePayloadRequest:
       type: object
       additionalProperties: false

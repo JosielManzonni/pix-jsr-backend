@@ -1,0 +1,71 @@
+openapi: 3.0.3
+
+info:
+  title: OpenPix JSR Observability API
+  version: 1.1.0
+  description: |
+    Operational surface shared by OpenPix JSR services: liveness and
+    readiness probes. The observability service also hosts the shared
+    instrumentation package (openpix_observability) used by every service.
+
+    It exposes no business data and never processes payments. The metrics
+    surface (`GET /metrics`) is deliberately absent from this contract; it is
+    served on a separate network port protected by deployment topology.
+  license:
+    name: GNU General Public License v3.0
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  - url: /
+    description: Host selected by the deployment environment.
+
+tags:
+  - name: Operational probes
+    description: Liveness and readiness probes. Never cached.
+
+paths:
+  /health:
+    get:
+      tags: [Operational probes]
+      summary: Liveness probe
+      description: |
+        Returns 200 when the process is alive and serving. The probe has no
+        dependencies on other services and its response is never cached.
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
+  /ready:
+    get:
+      tags: [Operational probes]
+      summary: Readiness probe
+      description: |
+        Returns 200 when the process can accept work. Readiness reflects only
+        this process; it never depends on the readiness of observed services,
+        so an outage elsewhere cannot make observability itself not-ready.
+      operationId: getReady
+      security: []
+      responses:
+        '200':
+          description: Process is ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatus'
+
+components:
+  schemas:
+    ServiceStatus:
+      type: object
+      additionalProperties: false
+      required: [status]
+      description: Operational probe result. Never contains sensitive data.
+      properties:
+        status:
+          type: string
+          enum: [ok]

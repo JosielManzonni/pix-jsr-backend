@@ -1,0 +1,459 @@
+openapi: 3.0.3
+
+info:
+  title: OpenPix JSR Payment API
+  version: 1.0.0
+  description: |
+    Payment lifecycle boundary. It creates a Payment from normalized
+    decoded-instruction data (payee Pix key, amount, optional description),
+    confirms or fails it through an Executor, and serves per-user retrieval
+    and history. Creation is idempotent per caller and Idempotency-Key.
+    Payment responses are never cacheable. The service never accepts a raw
+    Pix BR Code payload, performs no DICT operations, and never logs Pix
+    keys, account data, idempotency keys, or internal ids.
+  license:
+    name: GNU General Public License v3.0
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  - url: /
+    description: Host selected by the deployment environment.
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Payments
+    description: Payment creation, retrieval, and per-user history.
+  - name: Operational
+    description: Liveness and readiness probes.
+
+paths:
+  /payments:
+    post:
+      tags: [Payments]
+      summary: Create a payment
+      description: |
+        Creates a Payment in the `created` state, scoped to the caller
+        identified by the API key. Idempotent per (caller, Idempotency-Key):
+        a replay with the identical body returns the original Payment with
+        200; the same key with a different body is rejected with 409. The
+        request carries only normalized fields; a raw Pix BR Code payload
+        field is never accepted.
+      operationId: createPayment
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreate'
+            example:
+              payeePixKey: user@example.com
+              amount: "1234.56"
+              description: Weekly groceries
+      responses:
+        '201':
+          description: Payment created.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '200':
+          description: >
+            Idempotent replay. A Payment was already created for this caller
+            and Idempotency-Key with an identical body; the original Payment
+            is returned and nothing new is persisted.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /payments/{paymentId}:
+    get:
+      tags: [Payments]
+      summary: Retrieve a payment
+      description: |
+        Returns the caller's own Payment, including its current `status`.
+        Payments belonging to another caller are indistinguishable from
+        nonexistent ones: 404 with a Problem Details body that discloses
+        nothing about existence. Responses are never cacheable.
+      operationId: getPayment
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: The requested Payment.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /payments/history:
+    post:
+      tags: [Payments]
+      summary: Query payment history
+      x-runtime-method: QUERY
+      description: |
+        Per-user payment history, newest first, keyset-paginated with an
+        opaque cursor and stable under concurrent inserts.
+
+        OpenAPI 3.0.3 cannot declare the HTTP QUERY method (RFC 10008), so
+        this operation is declared as `post` for schema tooling and gateways.
+        At runtime the service registers the endpoint for the QUERY method
+        only; the declared `post` verb is not served and answers 405 (see the
+        `x-runtime-method` extension note above). Callers that support
+        RFC 10008 SHOULD use QUERY.
+      operationId: queryPaymentHistory
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentHistoryQuery'
+      responses:
+        '200':
+          description: One page of the caller's payments, newest first.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentHistoryPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /health:
+    get:
+      tags: [Operational]
+      summary: Liveness probe
+      description: Answers 200 while the process is alive. Exposes no internals.
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: The service process is alive.
+
+  /ready:
+    get:
+      tags: [Operational]
+      summary: Readiness probe
+      description: Answers 200 once the service can serve traffic. Exposes no internals.
+      operationId: readinessCheck
+      security: []
+      responses:
+        '200':
+          description: The service is ready to serve traffic.
+
+components:
+  parameters:
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: |
+        End-to-end identifier. A valid client value is propagated; otherwise
+        the server generates and returns a new one.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Caller-chosen value that, together with the API key, makes creation
+        idempotent. A replay with the identical body returns the original
+        Payment; the same key with a different body is rejected with 409.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      description: Payment identifier returned by POST /payments.
+      schema:
+        type: string
+
+  headers:
+    CorrelationId:
+      description: Effective correlation identifier used by the service.
+      required: true
+      schema:
+        type: string
+    CacheControlNoStore:
+      description: Financial responses are never cacheable.
+      required: true
+      schema:
+        type: string
+        enum: [no-store]
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Static API key identifying the calling User (a person, CPF/CNPJ).
+        Missing or unknown keys are rejected with 401.
+
+  responses:
+    BadRequest:
+      description: The request body is missing or has an invalid shape.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControlNoStore'
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://openpix.dev/problems/payment-invalid-request
+            title: Invalid request context
+            status: 400
+            detail: "Invalid or missing request value: amount."
+            code: PAYMENT_INVALID_REQUEST
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+    Unauthorized:
+      description: The API key is missing or unknown.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControlNoStore'
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://openpix.dev/problems/payment-unauthenticated
+            title: Unauthenticated
+            status: 401
+            detail: A valid X-API-Key header is required.
+            code: PAYMENT_UNAUTHENTICATED
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+    NotFound:
+      description: >
+        The Payment does not exist or belongs to another caller. The response
+        discloses nothing about existence.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControlNoStore'
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://openpix.dev/problems/payment-not-found
+            title: Payment not found
+            status: 404
+            detail: The requested payment does not exist.
+            code: PAYMENT_NOT_FOUND
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+    Conflict:
+      description: The Idempotency-Key was already used with a different request body.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControlNoStore'
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://openpix.dev/problems/payment-idempotency-conflict
+            title: Idempotency conflict
+            status: 409
+            detail: This Idempotency-Key was already used with a different request body.
+            code: PAYMENT_IDEMPOTENCY_CONFLICT
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+    ValidationFailed:
+      description: The request failed validation against the contract.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControlNoStore'
+        X-Correlation-ID:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://openpix.dev/problems/payment-validation-failed
+            title: Validation failed
+            status: 422
+            detail: "amount must be a string matching ^\\d+\\.\\d{2}$ within an allowed range."
+            code: PAYMENT_VALIDATION_FAILED
+            correlationId: 01J3Z2K6F8V5YQ6K7H1P4M8S2A
+
+  schemas:
+    Payment:
+      type: object
+      additionalProperties: false
+      required: [id, status, payeePixKey, amount, createdAt, updatedAt]
+      description: |
+        A payment in the caller's lifecycle. `status` is managed only by the
+        Payment aggregate: `created` is the initial state; `confirmed` and
+        `failed` are terminal.
+      properties:
+        id:
+          type: string
+          description: Payment identifier returned to the caller.
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        payeePixKey:
+          type: string
+          maxLength: 255
+          description: Recipient Pix key value (for example CPF, CNPJ, phone, email, or EVP).
+        amount:
+          type: string
+          maxLength: 10
+          pattern: '^\d+\.\d{2}$'
+          description: Decimal BRL amount as a string with exactly two decimal places.
+        description:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: Optional reference label or description supplied by the caller.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PaymentStatus:
+      type: string
+      enum: [created, confirmed, failed]
+      description: |
+        Payment lifecycle state. `created` is initial; `confirmed` and
+        `failed` are terminal and immutable.
+
+    PaymentCreate:
+      type: object
+      additionalProperties: false
+      required: [payeePixKey, amount]
+      description: |
+        Normalized request to create a Payment. Carries no raw Pix BR Code
+        payload; the client composes decoding and payment calls separately.
+      properties:
+        payeePixKey:
+          type: string
+          maxLength: 255
+          description: Recipient Pix key value (for example CPF, CNPJ, phone, email, or EVP).
+        amount:
+          type: string
+          maxLength: 10
+          pattern: '^\d+\.\d{2}$'
+          description: >
+            Decimal BRL amount as a string with exactly two decimal places,
+            greater than zero and at most 9999999.99 (cap enforced by
+            maxLength: 10).
+        description:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: Optional reference label or description for the payment.
+
+    PaymentHistoryQuery:
+      type: object
+      additionalProperties: false
+      description: Optional paging parameters for payment history.
+      properties:
+        limit:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+          default: 50
+          description: Maximum number of items in the page.
+        cursor:
+          type: string
+          nullable: true
+          description: Opaque keyset cursor returned by the previous page.
+
+    PaymentHistoryPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      description: One page of the caller's payment history, newest first.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+          description: Payments on this page, each carrying its current `status`.
+        nextCursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page, or null when this is the last page.
+
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, detail, code, correlationId]
+      description: RFC 9457 Problem Details with stable machine code and correlation.
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        code:
+          type: string
+          description: Stable machine code identifying the failure class.
+        correlationId:
+          type: string
+          description: Effective correlation identifier carried by the response.

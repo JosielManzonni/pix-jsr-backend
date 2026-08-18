@@ -22,8 +22,11 @@ Implemented services:
 - `decoding-service/` — owns the **decoding** context. Tests:
   `.venv/bin/python -m pytest` from `decoding-service/`.
 
-`payment` and `observability` are documented boundaries only; do not create
-them or invent their behavior.
+- `payment-service/` — owns the **payment** context. Contract:
+  `payment-service/contracts/openapi.yaml`. Tests: `.venv/bin/python -m pytest`
+  from `payment-service/`.
+- `observability` remains a documented boundary only; do not create it or
+  invent its behavior.
 
 ## Source of truth
 
@@ -33,13 +36,15 @@ them or invent their behavior.
   (`ADR-PLATFORM-001`, `RFC-PLATFORM-001`).
 - A service's own ADRs, RFCs and diagrams live beside that service, not in
   `docs/architecture/`: `sdui-service/docs/{adrs,rfcs,diagrams}`,
-  `decoding-service/docs/{adrs,rfcs}`. A service's medium-article brief
+  `decoding-service/docs/{adrs,rfcs}`, `payment-service/docs/{adrs,rfcs}`.
+  A service's medium-article brief
   lives in `<service>/docs/medium/`.
 - `docs/architecture/generated/knowledge-graph.jsonld` is a deterministic
   derived projection; never edit it by hand.
 - Each service directory owns its runtime and its contract
-  (`sdui-service/contracts/openapi.yaml`, `decoding-service/contracts/openapi.yaml`).
-  Contract changes belong with that service.
+  (`sdui-service/contracts/openapi.yaml`, `decoding-service/contracts/openapi.yaml`,
+  `payment-service/contracts/openapi.yaml`). Contract changes belong with that
+  service.
 
 ## Rules
 
@@ -63,7 +68,8 @@ them or invent their behavior.
 These are not present in the repo; do not assume they work:
 
 - `scripts/build_knowledge_graph.py` — `scripts/` does not exist. The graph
-  rebuild commands documented in `docs/architecture/README.md` cannot run.
+  rebuild commands documented in `docs/architecture/README.md` cannot run;
+  `docs/architecture/generated/knowledge-graph.jsonld` is not rebuilt.
 - CI — no `.github/`, workflow, or CI config exists.
 - Dependency environment — no virtualenv/`.env` is checked in; installation
   and activation are environment-specific and unmanaged here.

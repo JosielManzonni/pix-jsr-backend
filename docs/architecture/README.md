@@ -58,8 +58,12 @@ serviço que o possui, não aqui:
 
 - **sdui** → `sdui-service/docs/{adrs,rfcs,diagrams}`
 - **decoding** → `decoding-service/docs/{adrs,rfcs}`
-- **payment** → ainda não implementado como serviço; a proposta vive em
-  `openspec/changes/add-payment-service/` até ser arquivada.
+- **payment** → `payment-service/docs/{adrs,rfcs}`; o contexto transversal é
+  [[CTX-PAYMENT]], o RFC é
+  [[RFC-PAYMENT-001-payment-lifecycle-and-idempotency]], a ADR é
+  [[ADR-PAYMENT-001-aggregate-state-machine]], e o contrato vive em
+  `payment-service/contracts/openapi.yaml`. O lifecycle legado mais rico,
+  incluindo endpoints de confirm/cancel, está superseded e não é implementado.
 - **observability** → ainda não implementado; nenhum ADR/RFC existe além do
   contexto documentado em [[CTX-OBSERVABILITY]].
 
@@ -85,13 +89,15 @@ links de entrada e saída e, quando aplicável, o contrato OpenAPI relacionado.
 Decisões não são apagadas: são marcadas como `superseded` e apontam para a nova
 decisão.
 
-Depois de editar qualquer nó:
+Depois de editar qualquer nó, o Markdown continua sendo autoritativo. Neste
+checkout, os comandos abaixo são a automação documentada, mas não podem ser
+executados porque `scripts/build_knowledge_graph.py` ainda não existe:
 
 ```bash
 python3 scripts/build_knowledge_graph.py
 python3 scripts/build_knowledge_graph.py --check
 ```
 
-O Markdown é autoritativo. O arquivo
+O arquivo
 `generated/knowledge-graph.jsonld` é uma projeção determinística para GraphRAG,
 triplestores ou outras ferramentas semânticas.

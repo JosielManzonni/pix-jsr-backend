@@ -6,7 +6,7 @@ title: Payment Lifecycle Context
 status: active
 context: payment
 created: 2026-07-29
-updated: 2026-08-09
+updated: 2026-08-18
 tags: [context, payment, idempotency, state-machine]
 relations:
   - type: depends_on
@@ -24,8 +24,11 @@ relations:
 # Payment Lifecycle
 
 Contexto responsável pelo aggregate Payment, validação de valor e moeda,
-transições, idempotência, persistência e resultados. Não conhece componentes
-SDUI nem decide como um payload é lido.
+transições, idempotência, persistência e resultados. O `payment-service` cria
+pagamentos a partir de dados normalizados e os executa de forma assíncrona por
+um Executor; não aceita BR Code bruto, não conhece componentes SDUI nem decide
+como um payload é lido. O lifecycle mais rico legado, incluindo comandos de
+confirm/cancel, está superseded e não é comportamento implementado.
 
 ## Knowledge graph
 

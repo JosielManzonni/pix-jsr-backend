@@ -5,8 +5,8 @@
 ### Requirement: Payment creation
 
 The service SHALL expose `POST /payments` that creates a Payment from
-decoded-instruction data and enqueues a Payment Intent atomically in the same
-persistence transaction. The request SHALL carry a valid API key, an
+normalized decoded-instruction data and enqueues a Payment Intent atomically in
+the same persistence transaction. The request SHALL carry a valid API key, an
 `Idempotency-Key` header, a payee Pix key, an amount, and MAY carry a
 description. The schema SHALL NOT accept a raw Pix BR Code payload field.
 
@@ -197,7 +197,9 @@ perform DICT operations.
 The service SHALL expose the platform operational surface per the
 observability conventions: `/health` and `/ready` in the contract, metrics on
 a separate port, `X-Correlation-ID` echo or generation, structured logs, and
-W3C trace context via the shared observability package.
+W3C trace context. The shared `openpix_observability` package is deferred
+until observability-service exists; the service wires these directly in the
+meantime (see design.md) and swaps to the shared package when it lands.
 
 #### Scenario: Probes respond
 

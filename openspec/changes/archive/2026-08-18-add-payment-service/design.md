@@ -2,8 +2,9 @@
 
 ## Context
 
-- `payment` is a documented boundary only (CTX-PLATFORM, CTX-PAYMENT links);
-  root `AGENTS.md` says do not create it. This change lifts that gate.
+- `payment` was a documented boundary only (CTX-PLATFORM, CTX-PAYMENT links);
+  root `AGENTS.md` said do not create it. This change lifts that gate and
+  implements `payment-service/`.
 - The grilling (2026-08-08/09) established the product decisions; BACEN canon
   lives at `docs/reference/bacen/` (memory #125/#126).
 - The stale `docs/architecture/generated/knowledge-graph.jsonld` embeds an
@@ -78,15 +79,17 @@
   as data on the key; no Account entity; no DICT ops.
 - **Operational surface from day one.** /health + /ready in the contract,
   metrics on a separate port, structured logs without sensitive material,
-  W3C trace context, build info — via the shared `openpix_observability`
-  package.
+  W3C trace context, build info — intended for the shared
+  `openpix_observability` package. That package is deferred: observability-service
+  does not exist yet, so slice 5 wires health/ready, metrics, structured logs,
+  and correlation directly, and swaps to the shared package when it lands.
 - **Financial response safety.** `Cache-Control: no-store` on /payments
   responses; Pix keys, account data, idempotency keys, and internal ids never
   appear in logs, metrics, or traces.
 - **Docs.** Write RFC-PAYMENT-001 and ADR-PAYMENT-001 as source Markdown,
   recovered from the stale graph and updated to these decisions, with the
-  graph draft's superseded parts marked. Write CTX-PAYMENT.md (currently
-  missing; the README links to it). Lift the root AGENTS.md payment gate.
+  graph draft's superseded parts marked. Update CTX-PAYMENT.md and resolve
+  the README links. Lift the root AGENTS.md payment gate.
   `knowledge-graph.jsonld` is not rebuilt (rebuild script absent — known gap).
 
 ## Risks / Trade-offs
